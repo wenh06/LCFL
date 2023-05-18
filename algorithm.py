@@ -346,6 +346,7 @@ class LCFLClient(FedProxClient):
             "metrics": self._metrics,
         }
         if self.config.vr:
+            # currently, config.vr is always False
             message["gradients"] = [
                 p.grad.detach().clone() for p in self.model.parameters()
             ]
