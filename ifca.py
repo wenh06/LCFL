@@ -28,6 +28,8 @@ except ModuleNotFoundError:
     from pathlib import Path
 
     sys.path.append(str(Path(__file__).parent / "fl-sim"))
+
+    from fl_sim.nodes import ClientMessage
     from fl_sim.algorithms.fedprox import (
         FedProxClient,
         FedProxServer,
