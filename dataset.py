@@ -9,6 +9,7 @@ Reference
 
 """
 
+import pickle
 import posixpath
 import gzip
 from pathlib import Path
@@ -72,6 +73,11 @@ class FedRotatedMNIST(FedVisionDataset):
     num_clients : int, default 4800
         Number of clients to simulate.
 
+    References
+    ----------
+    .. [1] https://pytorch.org/vision/stable/_modules/torchvision/datasets/mnist.html#MNIST
+    .. [2] "An Efficient Framework for Clustered Federated Learning"
+
     """
 
     __name__ = "FedRotatedMNIST"
@@ -90,6 +96,9 @@ class FedRotatedMNIST(FedVisionDataset):
     def _preload(self, datadir: Optional[Union[str, Path]] = None) -> None:
         default_datadir = CACHED_DATA_DIR / "fed-rotated-mnist"
         self.datadir = Path(datadir or default_datadir).expanduser().resolve()
+
+        # download if needed
+        self.download_if_needed()
 
         self.DEFAULT_BATCH_SIZE = 20
         self.DEFAULT_TRAIN_CLIENTS_NUM = self.num_clients
@@ -114,9 +123,6 @@ class FedRotatedMNIST(FedVisionDataset):
                 transforms.Normalize((0.1307,), (0.3081,)),
             ]
         )
-
-        # download if needed
-        self.download_if_needed()
 
         # load data
         self._train_data_dict = {}
@@ -156,12 +162,12 @@ class FedRotatedMNIST(FedVisionDataset):
 
         # distribute data to clients
         self.indices = {}
-        self.indices["train"] = self.distribute_images(
+        self.indices["train"] = distribute_images(
             original_num_images["train"],
             self.num_clients // self.num_clusters,
             random=True,
         )
-        self.indices["test"] = self.distribute_images(
+        self.indices["test"] = distribute_images(
             original_num_images["test"],
             self.num_clients // self.num_clusters,
             random=False,
@@ -204,53 +210,23 @@ class FedRotatedMNIST(FedVisionDataset):
                     raw_labels["test"].copy(),
                 ]
             )
-            self.indices["train"].append(
-                self.distribute_images(
+            self.indices["train"].extend(
+                distribute_images(
                     np.arange(original_num_images["train"])
-                    + idx * original_num_images["train"],
+                    + (idx + 1) * original_num_images["train"],
                     self.num_clients // self.num_clusters,
                     random=True,
                 )
             )
-            self.indices["test"].append(
-                self.distribute_images(
+            self.indices["test"].extend(
+                distribute_images(
                     np.arange(original_num_images["test"])
-                    + idx * original_num_images["test"],
+                    + (idx + 1) * original_num_images["test"],
                     self.num_clients // self.num_clusters,
                     random=False,
                 )
             )
         del raw_images, raw_labels
-
-    @staticmethod
-    def distribute_images(
-        total: Union[int, np.ndarray], num_clients: int, random: bool = True
-    ) -> List[np.ndarray]:
-        """Distribute images to clients.
-
-        Parameters
-        ----------
-        total : int or np.ndarray
-            Total number of images,
-            or an array of indices of images.
-        num_clients : int
-            Number of clients.
-        random : bool, default True
-            Whether to distribute images randomly.
-
-        Returns
-        -------
-        list of np.ndarray
-            A list of arrays of indices of images.
-
-        """
-        if isinstance(total, int):
-            indices = np.arange(total)
-        else:
-            indices = total.copy()
-        if random:
-            np.random.shuffle(indices)
-        return np.array_split(indices, num_clients)
 
     def get_dataloader(
         self,
@@ -404,6 +380,12 @@ class FedRotatedMNIST(FedVisionDataset):
             label = self._train_data_dict[self._LABEL][
                 self.indices["train"][client_idx][image_idx]
             ]
+            image_idx = self.indices["train"][client_idx][image_idx]
+            angle = (
+                image_idx
+                // (len(self._train_data_dict[self._IMGAE]) // self.num_clusters)
+                * (360 // self.num_clusters)
+            )
         else:
             image_idx -= len(self.indices["train"][client_idx])
             image = (
@@ -415,20 +397,204 @@ class FedRotatedMNIST(FedVisionDataset):
             label = self._test_data_dict[self._LABEL][
                 self.indices["test"][client_idx][image_idx]
             ]
+            image_idx = self.indices["test"][client_idx][image_idx]
+            angle = (
+                image_idx
+                // (len(self._test_data_dict[self._IMGAE]) // self.num_clusters)
+                * (360 // self.num_clusters)
+            )
         plt.imshow(image, cmap="gray")
         plt.title(
-            f"client_id: {client_idx}, label: {label} ({self.label_map[int(label)]})"
+            f"image_idx: {image_idx}, label: {label} ({self.label_map[int(label)]}), "
+            f"angle: {angle}"
         )
         plt.show()
 
 
 class FedRotatedCIFAR10(FedVisionDataset):
-    """CIFAR10 dataset with rotation augmentation."""
+    """CIFAR10 dataset with rotation augmentation.
+
+    The rotations are fixed and are multiples of 360 / num_clusters.
+
+    The original CIFAR10 dataset contains 50k training images and 10k test images.
+    Images are 32x32 RGB images in 10 classes.
+
+    Parameters
+    ----------
+    datadir : str or Path, optional
+        Path to store the dataset. If not specified, the default path is used.
+    num_clusters : int, default 2
+        Number of clusters to partition the dataset into.
+    num_clients : int, default 200
+        Number of clients to simulate.
+
+    References
+    ----------
+    .. [1] https://pytorch.org/vision/stable/_modules/torchvision/datasets/cifar.html#CIFAR10
+    .. [2] "An Efficient Framework for Clustered Federated Learning"
+
+    """
 
     __name__ = "FedRotatedCIFAR10"
 
+    def __init__(
+        self,
+        datadir: Optional[Union[Path, str]] = None,
+        num_clusters: int = 2,
+        num_clients: int = 200,
+    ) -> None:
+        self.num_clusters = num_clusters
+        self.num_clients = num_clients
+        assert self.num_clients % self.num_clusters == 0
+        super().__init__(datadir=datadir)
+
     def _preload(self, datadir: Optional[Union[str, Path]] = None) -> None:
-        raise NotImplementedError
+        default_datadir = CACHED_DATA_DIR / "fed-rotated-cifar10"
+        self.datadir = Path(datadir or default_datadir).expanduser().resolve()
+
+        # download data
+        self.download_if_needed()
+
+        self.DEFAULT_BATCH_SIZE = 20
+        self.DEFAULT_TRAIN_CLIENTS_NUM = self.num_clients
+        self.DEFAULT_TEST_CLIENTS_NUM = self.num_clients
+
+        self.DEFAULT_TRAIN_FILE = [f"data_batch_{i}" for i in range(1, 6)]
+        self.DEFAULT_TEST_FILE = ["test_batch"]
+        self._IMGAE = "image"
+        self._LABEL = "label"
+
+        # set criterion
+        self.criterion = torch.nn.CrossEntropyLoss()
+
+        # set transforms for creating dataset
+        self.transform = transforms.Compose(
+            [
+                # transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=(0.4914, 0.4822, 0.4465),
+                    std=(0.2023, 0.1994, 0.2010),
+                ),
+            ]
+        )
+
+        # load data
+        self._train_data_dict = {
+            self._IMGAE: np.empty((0, 3, 32, 32), dtype=np.uint8),
+            self._LABEL: np.empty((0,), dtype=np.int64),
+        }
+        self._test_data_dict = {
+            self._IMGAE: np.empty((0, 3, 32, 32), dtype=np.uint8),
+            self._LABEL: np.empty((0,), dtype=np.int64),
+        }
+
+        for file in self.DEFAULT_TRAIN_FILE:
+            data = pickle.loads((self.datadir / file).read_bytes(), encoding="bytes")
+            self._train_data_dict[self._IMGAE] = np.concatenate(
+                [
+                    self._train_data_dict[self._IMGAE],
+                    data[b"data"].reshape(-1, 3, 32, 32).astype(np.uint8),
+                ]
+            )
+            self._train_data_dict[self._LABEL] = np.concatenate(
+                [
+                    self._train_data_dict[self._LABEL],
+                    np.array(data[b"labels"]).astype(np.int64),
+                ]
+            )
+        data = pickle.loads(
+            (self.datadir / self.DEFAULT_TEST_FILE[0]).read_bytes(),
+            encoding="bytes",
+        )
+        self._test_data_dict[self._IMGAE] = (
+            data[b"data"].reshape(-1, 3, 32, 32).astype(np.uint8)
+        )
+        self._test_data_dict[self._LABEL] = np.array(data[b"labels"]).astype(np.int64)
+
+        original_num_images = {
+            "train": len(self._train_data_dict[self._LABEL]),
+            "test": len(self._test_data_dict[self._LABEL]),
+        }
+
+        # set n_class
+        self._n_class = len(
+            np.unique(
+                np.concatenate(
+                    [
+                        self._train_data_dict[self._LABEL],
+                        self._test_data_dict[self._LABEL],
+                    ]
+                )
+            )
+        )
+
+        # distribute data to clients
+        self.indices = {}
+        self.indices["train"] = distribute_images(
+            original_num_images["train"],
+            self.num_clients // self.num_clusters,
+            random=True,
+        )
+        self.indices["test"] = distribute_images(
+            original_num_images["test"],
+            self.num_clients // self.num_clusters,
+            random=False,
+        )
+
+        # perform rotation, and distribute data to clients
+        print("Performing rotation...")
+        angles = np.arange(0, 360, 360 / self.num_clusters)[1:]
+        raw_images = {
+            "train": torch.from_numpy(self._train_data_dict[self._IMGAE].copy()),
+            "test": torch.from_numpy(self._test_data_dict[self._IMGAE].copy()),
+        }
+        raw_labels = {
+            "train": self._train_data_dict[self._LABEL].copy(),
+            "test": self._test_data_dict[self._LABEL].copy(),
+        }
+        for idx, angle in enumerate(angles):
+            transform = FixedDegreeRotation(angle)
+            self._train_data_dict[self._IMGAE] = np.concatenate(
+                [
+                    self._train_data_dict[self._IMGAE],
+                    transform(raw_images["train"]).numpy(),
+                ]
+            )
+            self._train_data_dict[self._LABEL] = np.concatenate(
+                [
+                    self._train_data_dict[self._LABEL],
+                    raw_labels["train"].copy(),
+                ]
+            )
+            self._test_data_dict[self._IMGAE] = np.concatenate(
+                [
+                    self._test_data_dict[self._IMGAE],
+                    transform(raw_images["test"]).numpy(),
+                ]
+            )
+            self._test_data_dict[self._LABEL] = np.concatenate(
+                [
+                    self._test_data_dict[self._LABEL],
+                    raw_labels["test"].copy(),
+                ]
+            )
+            self.indices["train"].extend(
+                distribute_images(
+                    np.arange(original_num_images["train"])
+                    + (idx + 1) * original_num_images["train"],
+                    self.num_clients // self.num_clusters,
+                    random=True,
+                )
+            )
+            self.indices["test"].extend(
+                distribute_images(
+                    np.arange(original_num_images["test"])
+                    + (idx + 1) * original_num_images["test"],
+                    self.num_clients // self.num_clusters,
+                    random=False,
+                )
+            )
+        del raw_images, raw_labels
 
     def get_dataloader(
         self,
@@ -436,7 +602,42 @@ class FedRotatedCIFAR10(FedVisionDataset):
         test_bs: Optional[int] = None,
         client_idx: Optional[int] = None,
     ) -> Tuple[torchdata.DataLoader, torchdata.DataLoader]:
-        raise NotImplementedError
+        if client_idx is None:
+            train_slice = slice(None)
+            test_slice = slice(None)
+        else:
+            train_slice = self.indices["train"][client_idx]
+            test_slice = self.indices["test"][client_idx]
+
+        train_ds = torchdata.TensorDataset(
+            self.transform(
+                torch.from_numpy(
+                    self._train_data_dict[self._IMGAE][train_slice]
+                ).float()
+            ).unsqueeze(1),
+            torch.from_numpy(self._train_data_dict[self._LABEL][train_slice]).long(),
+        )
+        train_dl = torchdata.DataLoader(
+            dataset=train_ds,
+            batch_size=train_bs or self.DEFAULT_BATCH_SIZE,
+            shuffle=True,
+            drop_last=False,
+        )
+
+        test_ds = torchdata.TensorDataset(
+            self.transform(
+                torch.from_numpy(self._test_data_dict[self._IMGAE][test_slice]).float()
+            ).unsqueeze(1),
+            torch.from_numpy(self._test_data_dict[self._LABEL][test_slice]).long(),
+        )
+        test_dl = torchdata.DataLoader(
+            dataset=test_ds,
+            batch_size=test_bs or self.DEFAULT_BATCH_SIZE,
+            shuffle=False,
+            drop_last=False,
+        )
+
+        return train_dl, test_dl
 
     def extra_repr_keys(self) -> List[str]:
         return [
@@ -454,25 +655,77 @@ class FedRotatedCIFAR10(FedVisionDataset):
 
     @property
     def url(self) -> str:
-        raise NotImplementedError
+        return "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
 
     @property
     def candidate_models(self) -> Dict[str, torch.nn.Module]:
         """
         a set of candidate models
         """
-        raise NotImplementedError
+        return {
+            "cnn_cifar": mnn.CNNCifar(num_classes=self.n_class),
+            "resnet10": mnn.ResNet10(num_classes=self.n_class),
+        }
 
     @property
     def doi(self) -> List[str]:
-        raise NotImplementedError
+        # TODO: add doi of CIFAR10 and IFCA
+        return None
 
     @property
     def label_map(self) -> dict:
         return CIFAR10_LABEL_MAP
 
     def view_image(self, client_idx: int, image_idx: int) -> None:
-        raise NotImplementedError
+        import matplotlib.pyplot as plt
+
+        if client_idx >= self.num_clients:
+            raise ValueError(
+                f"client_idx must be less than {self.num_clients}, got {client_idx}"
+            )
+
+        total_num_images = len(self.indices["train"][client_idx]) + len(
+            self.indices["test"][client_idx]
+        )
+        if image_idx >= total_num_images:
+            raise ValueError(
+                f"image_idx must be less than {total_num_images}, got {image_idx}"
+            )
+        if image_idx < len(self.indices["train"][client_idx]):
+            image = self._train_data_dict[self._IMGAE][
+                self.indices["train"][client_idx][image_idx]
+            ]
+            label = self._train_data_dict[self._LABEL][
+                self.indices["train"][client_idx][image_idx]
+            ]
+            image_idx = self.indices["train"][client_idx][image_idx]
+            angle = (
+                image_idx
+                // (len(self._train_data_dict[self._IMGAE]) // self.num_clusters)
+                * (360 // self.num_clusters)
+            )
+        else:
+            image_idx -= len(self.indices["train"][client_idx])
+            image = self._test_data_dict[self._IMGAE][
+                self.indices["test"][client_idx][image_idx]
+            ]
+            label = self._test_data_dict[self._LABEL][
+                self.indices["test"][client_idx][image_idx]
+            ]
+            image_idx = self.indices["test"][client_idx][image_idx]
+            angle = (
+                image_idx
+                // (len(self._test_data_dict[self._IMGAE]) // self.num_clusters)
+                * (360 // self.num_clusters)
+            )
+        # image: channel first to channel last
+        image = image.transpose(1, 2, 0)
+        plt.imshow(image)
+        plt.title(
+            f"image_idx: {image_idx}, label: {label} ({self.label_map[int(label)]}), "
+            f"angle: {angle}"
+        )
+        plt.show()
 
 
 class FixedDegreeRotation(torch.nn.Module):
@@ -480,9 +733,39 @@ class FixedDegreeRotation(torch.nn.Module):
 
     __name__ = "FixedDegreeRotation"
 
-    def __init__(self, degree: float = 0.0):
+    def __init__(self, degree: float = 0.0) -> None:
         super().__init__()
         self.degree = degree
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return rotate(x, self.degree)
+
+
+def distribute_images(
+    total: Union[int, np.ndarray], num_clients: int, random: bool = True
+) -> List[np.ndarray]:
+    """Distribute images to clients.
+
+    Parameters
+    ----------
+    total : int or np.ndarray
+        Total number of images,
+        or an array of indices of images.
+    num_clients : int
+        Number of clients.
+    random : bool, default True
+        Whether to distribute images randomly.
+
+    Returns
+    -------
+    list of np.ndarray
+        A list of arrays of indices of images.
+
+    """
+    if isinstance(total, int):
+        indices = np.arange(total)
+    else:
+        indices = total.copy()
+    if random:
+        np.random.shuffle(indices)
+    return np.array_split(indices, num_clients)
