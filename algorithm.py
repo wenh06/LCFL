@@ -118,8 +118,15 @@ class LCFLServer(FedProxServer):
         self._cluster_centers = None
 
     @property
-    def client_cls(self) -> "LCFLClient":
+    def client_cls(self) -> type:
         return LCFLClient
+
+    @property
+    def config_cls(self) -> Dict[str, type]:
+        return {
+            "server": LCFLServerConfig,
+            "client": LCFLClientConfig,
+        }
 
     @property
     def required_config_fields(self) -> List[str]:
@@ -131,6 +138,10 @@ class LCFLServer(FedProxServer):
             # the warm up stage
             super().communicate(target)
         else:
+            # NOTE: for simplicity,
+            # the clustering is done on the server side,
+            # which indeed should be done on the clients
+
             # federated training on each cluster
             target._received_messages = {
                 "parameters": [
