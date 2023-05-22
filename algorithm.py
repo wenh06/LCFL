@@ -1,11 +1,13 @@
 """
 """
 
+import warnings
 from copy import deepcopy
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import numpy as np
 import torch
+from torch_ecg.utils.misc import add_docstring
 from sklearn.cluster import DBSCAN
 from sklearn_extra.cluster import KMedoids
 from tqdm.auto import tqdm
@@ -44,6 +46,34 @@ __all__ = [
 
 
 class LCFLServerConfig(FedProxServerConfig):
+    """Server config for the LCFL algorithm.
+
+    Parameters
+    ----------
+    num_clusters : int
+        The number of clusters.
+    num_iters : int
+        The number of (outer) iterations.
+    num_clients : int
+        The number of clients.
+    cluster_method : str, default "kmedoids"
+        The clustering method to use based on the distance matrix.
+        Currently only support "kmedoids" and "dbscan".
+    num_warmup_iters : int, default 10
+        The number of warmup iterations.
+    local_warmup : bool, default False
+        Whether to use local warmup or federated warmup.
+    **kwargs : dict, optional
+        Additional keyword arguments:
+
+        - ``txt_logger`` : bool, default True
+            Whether to use txt logger.
+        - ``csv_logger`` : bool, default True
+            Whether to use csv logger.
+        - ``eval_every`` : int, default 1
+            The number of iterations to evaluate the model.
+
+    """
 
     __name__ = "LCFLServerConfig"
 
@@ -55,12 +85,23 @@ class LCFLServerConfig(FedProxServerConfig):
         cluster_method: str = "kmedoids",
         num_warmup_iters: int = 10,
         local_warmup: bool = False,
+        **kwargs: Any,
     ) -> None:
+        if kwargs.pop("clients_sample_ratio", None) is not None:
+            warnings.warn(
+                "`clients_sample_ratio` is not used in LCFL, and always set to 1",
+                RuntimeWarning,
+            )
+        if kwargs.pop("vr", None) is not None:
+            warnings.warn(
+                "`vr` is not used in LCFL, and always set to False", RuntimeWarning
+            )
         super().__init__(
             num_iters,
             num_clients,
             clients_sample_ratio=1,
             vr=False,
+            **kwargs,
         )
         self.algorithm = "LCFL"
         self.num_clusters = num_clusters
@@ -70,6 +111,18 @@ class LCFLServerConfig(FedProxServerConfig):
 
 
 class LCFLClientConfig(FedProxClientConfig):
+    """Client config for the LCFL algorithm.
+
+    Parameters
+    ----------
+    batch_size : int
+        The batch size.
+    num_epochs : int
+        The number of epochs.
+    lr : float, default 1e-2
+        The learning rate.
+
+    """
 
     __name__ = "LCFLClientConfig"
 
@@ -88,6 +141,7 @@ class LCFLClientConfig(FedProxClientConfig):
         self.algorithm = "LCFL"
 
 
+@add_docstring(FedProxServer.__doc__.replace("FedProx", "LCFL"))
 class LCFLServer(FedProxServer):
 
     __name__ = "LCFLServer"
@@ -334,6 +388,7 @@ class LCFLServer(FedProxServer):
         self._logger_manager.flush()
 
 
+@add_docstring(FedProxClient.__doc__.replace("FedProx", "LCFL"))
 class LCFLClient(FedProxClient):
 
     __name__ = "LCFLClient"
