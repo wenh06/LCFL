@@ -96,6 +96,7 @@ class FedRotatedMNIST(FedVisionDataset):
     def _preload(self, datadir: Optional[Union[str, Path]] = None) -> None:
         default_datadir = CACHED_DATA_DIR / "fed-rotated-mnist"
         self.datadir = Path(datadir or default_datadir).expanduser().resolve()
+        self.datadir.mkdir(parents=True, exist_ok=True)
 
         # download if needed
         self.download_if_needed()
@@ -451,6 +452,7 @@ class FedRotatedCIFAR10(FedVisionDataset):
     def _preload(self, datadir: Optional[Union[str, Path]] = None) -> None:
         default_datadir = CACHED_DATA_DIR / "fed-rotated-cifar10"
         self.datadir = Path(datadir or default_datadir).expanduser().resolve()
+        self.datadir.mkdir(parents=True, exist_ok=True)
 
         # download data
         self.download_if_needed()
