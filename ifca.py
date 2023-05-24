@@ -105,6 +105,11 @@ class IFCAClientConfig(BaseClientConfig):
         The number of epochs.
     lr : float, default 1e-2
         The learning rate.
+    **kwargs : dict, optional
+        Additional keyword arguments:
+
+        - ``verbose`` : int, default 1
+            The verbosity level.
 
     """
 
@@ -115,11 +120,13 @@ class IFCAClientConfig(BaseClientConfig):
         batch_size: int,
         num_epochs: int,
         lr: float = 1e-2,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
             batch_size=batch_size,
             num_epochs=num_epochs,
             lr=lr,
+            **kwargs,
         )
         self.algorithm = "IFCA"
 
@@ -189,7 +196,7 @@ class IFCAServer(BaseServer):
                 continue
             # initialize the cluster center
             for p in cluster["center_model_params"]:
-                p.data.fill_(0)
+                p.data.zero_()
         # sum up the parameters from each client
         for m in self._received_messages:
             cluster_id = m["cluster_id"]

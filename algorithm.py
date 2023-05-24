@@ -199,6 +199,9 @@ class LCFLServer(BaseServer):
         """Send cluster centers to client"""
         if self._cluster_centers is None:
             # the warm up stage
+            if self.config.local_warmup:
+                # local warmup, do nothing on the server side
+                return
             super().communicate(target)
         else:
             # NOTE: for simplicity,
@@ -220,6 +223,9 @@ class LCFLServer(BaseServer):
         """Update cluster centers"""
         if self._cluster_centers is None:
             # the warm up stage
+            if self.config.local_warmup:
+                # local warmup, do nothing on the server side
+                return
             super().update()
         else:
             # federated training on each cluster
@@ -275,7 +281,6 @@ class LCFLServer(BaseServer):
                         client = self._clients[client_id]
                         if not self.config.local_warmup:
                             self._communicate(client)
-                        client._update()
                         if (self.n_iter + 1) % self.config.eval_every == 0:
                             for part in self.dataset.data_parts:
                                 metrics = client.evaluate(part)
@@ -288,6 +293,7 @@ class LCFLServer(BaseServer):
                                     epoch=self.n_iter + 1,
                                     part=part,
                                 )
+                        client._update()
                         if not self.config.local_warmup:
                             client._communicate(self)
                         pbar.update(1)
@@ -383,11 +389,11 @@ class LCFLServer(BaseServer):
                         desc=f"Iter {self.n_iter+1}/{total_iters} | Cluster {cluster_id}",
                         unit="client",
                         mininterval=1.0,
+                        disable=self.config.verbose < 1,
                     ) as pbar:
                         for client_id in selected_clients:
                             client = self._clients[client_id]
                             self._communicate(client)
-                            client._update()
                             if (self.n_iter + 1) % self.config.eval_every == 0:
                                 for part in self.dataset.data_parts:
                                     metrics = client.evaluate(part)
@@ -400,6 +406,7 @@ class LCFLServer(BaseServer):
                                         epoch=self.n_iter + 1,
                                         part=part,
                                     )
+                            client._update()
                             client._communicate(self)
                             pbar.update(1)
                         if (self.n_iter + 1) % self.config.eval_every == 0:
