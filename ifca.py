@@ -187,22 +187,14 @@ class IFCAServer(BaseServer):
         }
         for m in self._received_messages:
             cluster_sizes[m["cluster_id"]] += 1
-        # update the cluster centers via averaging
-        for cluster_id, cluster in self._cluster_centers.items():
-            cluster["client_ids"] = []
-            # check if the cluster is empty
-            # leave it unchanged if it is empty
-            if cluster_sizes[cluster_id] == 0:
-                continue
-            # initialize the cluster center
-            for p in cluster["center_model_params"]:
-                p.data.zero_()
-        # sum up the parameters from each client
+        # update the cluster centers via averaging the delta_parameters from each client
         for m in self._received_messages:
             cluster_id = m["cluster_id"]
             cluster = self._cluster_centers[cluster_id]
-            for p, p_client in zip(cluster["center_model_params"], m["parameters"]):
-                p.data.add_(p_client.data, alpha=1 / cluster_sizes[cluster_id])
+            for p, p_delta in zip(
+                cluster["center_model_params"], m["delta_parameters"]
+            ):
+                p.data.add_(p_delta.data, alpha=1 / cluster_sizes[cluster_id])
             cluster["client_ids"].append(m["client_id"])
 
 
@@ -224,10 +216,13 @@ class IFCAClient(BaseClient):
         return []
 
     def communicate(self, target: "IFCAServer") -> None:
+        delta_parameters = self.get_detached_model_parameters()
+        for dp, rp in zip(delta_parameters, self._cached_parameters):
+            dp.data.add_(rp.data, alpha=-1)
         message = {
             "client_id": self.client_id,
             "cluster_id": self.cluster_id,
-            "parameters": self.get_detached_model_parameters(),
+            "delta_parameters": delta_parameters,
             "train_samples": len(self.train_loader.dataset),
             "metrics": self._metrics,
         }

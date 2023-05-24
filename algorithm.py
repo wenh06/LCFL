@@ -208,7 +208,7 @@ class LCFLServer(BaseServer):
             # the clustering is done on the server side,
             # which indeed should be done on the clients
 
-            # federated training on each cluster
+            # send cluster centers to client
             target._received_messages = {
                 "parameters": [
                     p.detach().clone()
@@ -232,13 +232,14 @@ class LCFLServer(BaseServer):
             for cluster_id in self._cluster_centers:
                 cluster_center = self._cluster_centers[cluster_id]
                 cluster_size = len(cluster_center["client_ids"])
+                alpha = 1 / cluster_size
                 # average the cluster center model using received parameters
                 for idx, p in enumerate(cluster_center["center_model"].parameters()):
-                    p.zero_()
+                    # add received delta_parameters to the cluster center model
                     for m in self._received_messages:
                         if m["cluster_id"] != cluster_id:
                             continue
-                        p.add_(m["parameters"][idx].div_(cluster_size).to(self.device))
+                        p.add_(m["delta_parameters"][idx].to(self.device), alpha=alpha)
 
     def train_federated(self, extra_configs: Optional[dict] = None) -> None:
         """Federated (distributed) training,
@@ -258,8 +259,31 @@ class LCFLServer(BaseServer):
         Run clients training in parallel.
 
         """
+        if self._complete_experiment:
+            # reset before training if a previous experiment is completed
+            self._reset()
+
         self._logger_manager.log_message("Training federated...")
-        self._logger_manager.log_message("Warm Up...")
+
+        # warm up stage
+        self._warmup()
+
+        # cluster clients
+        self._perform_clustering()
+
+        # perform federated training on each cluster
+        self._train_cluster_federated()
+
+        self._logger_manager.log_message("Federated training finished...")
+        self._logger_manager.flush()
+        # self._logger_manager.reset()
+
+        self._complete_experiment = True
+
+    def _warmup(self) -> None:
+        """Warm up stage."""
+        self._logger_manager.log_message("Warming up...")
+
         self.n_iter = 0
         with tqdm(
             range(self.config.num_warmup_iters),
@@ -308,11 +332,16 @@ class LCFLServer(BaseServer):
                     if not self.config.local_warmup:
                         self._update()
 
+    def _perform_clustering(self) -> None:
+        """Perform clustering.
+
+        For simplicity, we omit the transimission of client models
+        and directly use the client models for clustering
+        the transmission of distance vectors is also simplified
+        dist stored in server.
+        """
         self._logger_manager.log_message("Perform clustering...")
-        # for simplicity, we omit the transimission of client models
-        # and directly use the client models for clustering
-        # the transmission of distance vectors is also simplified
-        # dist stored in server
+
         dist = {
             client_id: np.zeros((self.config.num_clients,))
             for client_id in range(self.config.num_clients)
@@ -373,10 +402,12 @@ class LCFLServer(BaseServer):
         for client_id in range(self.config.num_clients):
             self._clients[client_id]._cluster_id = cluster_ids[client_id]
 
-        # perform federated training on each cluster
+    def _train_cluster_federated(self) -> None:
+        """Perform federated training on each cluster."""
         self._logger_manager.log_message(
             "Perform federated training on each cluster..."
         )
+
         total_iters = self.config.num_warmup_iters + self.config.num_iters
         with tqdm(
             range(self.config.num_warmup_iters, total_iters),
@@ -417,10 +448,6 @@ class LCFLServer(BaseServer):
                             self.aggregate_client_metrics()
                         self._update()
 
-        self._logger_manager.log_message("Federated training finished...")
-        self._logger_manager.flush()
-        self._logger_manager.reset()
-
 
 @add_docstring(BaseClient.__doc__.replace(_base_algorithm, "LCFL"))
 class LCFLClient(BaseClient):
@@ -440,10 +467,13 @@ class LCFLClient(BaseClient):
         return []
 
     def communicate(self, target: "LCFLServer") -> None:
+        delta_parameters = self.get_detached_model_parameters()
+        for dp, rp in zip(delta_parameters, self._cached_parameters):
+            dp.data.add_(rp.data, alpha=-1)
         message = {
             "client_id": self.client_id,
             "cluster_id": self._cluster_id,
-            "parameters": self.get_detached_model_parameters(),
+            "delta_parameters": delta_parameters,
             "train_samples": len(self.train_loader.dataset),
             "metrics": self._metrics,
         }

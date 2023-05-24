@@ -18,5 +18,4 @@ easydict
 requests
 bib-lookup>=0.0.19
 deprecate-kwargs
-deprecated
 torch-ecg>=0.0.26
