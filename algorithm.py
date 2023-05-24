@@ -281,7 +281,9 @@ class LCFLServer(BaseServer):
                         client = self._clients[client_id]
                         if not self.config.local_warmup:
                             self._communicate(client)
-                        if (self.n_iter + 1) % self.config.eval_every == 0:
+                        if (self.n_iter > 0) and (
+                            (self.n_iter + 1) % self.config.eval_every == 0
+                        ):
                             for part in self.dataset.data_parts:
                                 metrics = client.evaluate(part)
                                 metrics["cluster_id"] = -1
@@ -289,8 +291,8 @@ class LCFLServer(BaseServer):
                                 self._logger_manager.log_metrics(
                                     client_id,
                                     metrics,
-                                    step=self.n_iter + 1,
-                                    epoch=self.n_iter + 1,
+                                    step=self.n_iter,
+                                    epoch=self.n_iter,
                                     part=part,
                                 )
                         client._update()
@@ -298,8 +300,10 @@ class LCFLServer(BaseServer):
                             client._communicate(self)
                         pbar.update(1)
                     if (
-                        self.n_iter + 1
-                    ) % self.config.eval_every == 0 and not self.config.local_warmup:
+                        (self.n_iter > 0)
+                        and ((self.n_iter + 1) % self.config.eval_every == 0)
+                        and (not self.config.local_warmup)
+                    ):
                         self.aggregate_client_metrics()
                     if not self.config.local_warmup:
                         self._update()
@@ -402,8 +406,8 @@ class LCFLServer(BaseServer):
                                     self._logger_manager.log_metrics(
                                         client_id,
                                         metrics,
-                                        step=self.n_iter + 1,
-                                        epoch=self.n_iter + 1,
+                                        step=self.n_iter,
+                                        epoch=self.n_iter,
                                         part=part,
                                     )
                             client._update()
