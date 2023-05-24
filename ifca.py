@@ -16,12 +16,14 @@ from torch_ecg.utils.misc import add_docstring
 
 try:
     from fl_sim.nodes import ClientMessage
-    from fl_sim.algorithms.fedprox import (
-        FedProxClient,
-        FedProxServer,
-        FedProxClientConfig,
-        FedProxServerConfig,
+    from fl_sim.algorithms.fedopt import (
+        FedAvgClient as BaseClient,
+        FedAvgServer as BaseServer,
+        FedAvgClientConfig as BaseClientConfig,
+        FedAvgServerConfig as BaseServerConfig,
     )
+
+    _base_algorithm = "FedAvg"
 except ModuleNotFoundError:
     # not installed,
     # import from the submodule instead
@@ -31,15 +33,17 @@ except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
     from fl_sim.nodes import ClientMessage
-    from fl_sim.algorithms.fedprox import (
-        FedProxClient,
-        FedProxServer,
-        FedProxClientConfig,
-        FedProxServerConfig,
+    from fl_sim.algorithms.fedopt import (
+        FedAvgClient as BaseClient,
+        FedAvgServer as BaseServer,
+        FedAvgClientConfig as BaseClientConfig,
+        FedAvgServerConfig as BaseServerConfig,
     )
 
+    _base_algorithm = "FedAvg"
 
-class IFCAServerConfig(FedProxServerConfig):
+
+class IFCAServerConfig(BaseServerConfig):
     """Server config for the IFCA algorithm.
 
     Parameters
@@ -55,10 +59,14 @@ class IFCAServerConfig(FedProxServerConfig):
 
         - ``txt_logger`` : bool, default True
             Whether to use txt logger.
-        - ``csv_logger`` : bool, default True
+        - ``csv_logger`` : bool, default False
             Whether to use csv logger.
+        - ``json_logger`` : bool, default True
+            Whether to use json logger.
         - ``eval_every`` : int, default 1
             The number of iterations to evaluate the model.
+        - ``verbose`` : int, default 1
+            The verbosity level.
 
     """
 
@@ -76,22 +84,17 @@ class IFCAServerConfig(FedProxServerConfig):
                 "`clients_sample_ratio` is not used in IFCA, and always set to 1",
                 RuntimeWarning,
             )
-        if kwargs.pop("vr", None) is not None:
-            warnings.warn(
-                "`vr` is not used in IFCA, and always set to False", RuntimeWarning
-            )
         super().__init__(
             num_iters,
             num_clients,
             clients_sample_ratio=1,
-            vr=False,
             **kwargs,
         )
         self.algorithm = "IFCA"
         self.num_clusters = num_clusters
 
 
-class IFCAClientConfig(FedProxClientConfig):
+class IFCAClientConfig(BaseClientConfig):
     """Client config for the IFCA algorithm.
 
     Parameters
@@ -117,13 +120,12 @@ class IFCAClientConfig(FedProxClientConfig):
             batch_size=batch_size,
             num_epochs=num_epochs,
             lr=lr,
-            vr=False,
         )
         self.algorithm = "IFCA"
 
 
-@add_docstring(FedProxServer.__doc__.replace("FedProx", "IFCA"))
-class IFCAServer(FedProxServer):
+@add_docstring(BaseServer.__doc__.replace(_base_algorithm, "IFCA"))
+class IFCAServer(BaseServer):
 
     __name__ = "IFCAServer"
 
@@ -197,8 +199,8 @@ class IFCAServer(FedProxServer):
             cluster["client_ids"].append(m["client_id"])
 
 
-@add_docstring(FedProxClient.__doc__.replace("FedProx", "IFCA"))
-class IFCAClient(FedProxClient):
+@add_docstring(BaseClient.__doc__.replace(_base_algorithm, "IFCA"))
+class IFCAClient(BaseClient):
 
     __name__ = "IFCAClient"
 

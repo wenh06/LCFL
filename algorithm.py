@@ -14,12 +14,14 @@ from tqdm.auto import tqdm
 
 try:
     from fl_sim.nodes import ClientMessage
-    from fl_sim.algorithms.fedprox import (
-        FedProxClient,
-        FedProxServer,
-        FedProxClientConfig,
-        FedProxServerConfig,
+    from fl_sim.algorithms.fedopt import (
+        FedAvgClient as BaseClient,
+        FedAvgServer as BaseServer,
+        FedAvgClientConfig as BaseClientConfig,
+        FedAvgServerConfig as BaseServerConfig,
     )
+
+    _base_algorithm = "FedAvg"
 except ModuleNotFoundError:
     # not installed,
     # import from the submodule instead
@@ -29,12 +31,14 @@ except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
     from fl_sim.nodes import ClientMessage
-    from fl_sim.algorithms.fedprox import (
-        FedProxClient,
-        FedProxServer,
-        FedProxClientConfig,
-        FedProxServerConfig,
+    from fl_sim.algorithms.fedopt import (
+        FedAvgClient as BaseClient,
+        FedAvgServer as BaseServer,
+        FedAvgClientConfig as BaseClientConfig,
+        FedAvgServerConfig as BaseServerConfig,
     )
+
+    _base_algorithm = "FedAvg"
 
 
 __all__ = [
@@ -45,7 +49,7 @@ __all__ = [
 ]
 
 
-class LCFLServerConfig(FedProxServerConfig):
+class LCFLServerConfig(BaseServerConfig):
     """Server config for the LCFL algorithm.
 
     Parameters
@@ -68,10 +72,14 @@ class LCFLServerConfig(FedProxServerConfig):
 
         - ``txt_logger`` : bool, default True
             Whether to use txt logger.
-        - ``csv_logger`` : bool, default True
+        - ``csv_logger`` : bool, default False
             Whether to use csv logger.
+        - ``json_logger`` : bool, default True
+            Whether to use json logger.
         - ``eval_every`` : int, default 1
             The number of iterations to evaluate the model.
+        - ``verbose`` : int, default 1
+            The verbosity level.
 
     """
 
@@ -92,15 +100,10 @@ class LCFLServerConfig(FedProxServerConfig):
                 "`clients_sample_ratio` is not used in LCFL, and always set to 1",
                 RuntimeWarning,
             )
-        if kwargs.pop("vr", None) is not None:
-            warnings.warn(
-                "`vr` is not used in LCFL, and always set to False", RuntimeWarning
-            )
         super().__init__(
             num_iters,
             num_clients,
             clients_sample_ratio=1,
-            vr=False,
             **kwargs,
         )
         self.algorithm = "LCFL"
@@ -110,7 +113,7 @@ class LCFLServerConfig(FedProxServerConfig):
         self.local_warmup = local_warmup
 
 
-class LCFLClientConfig(FedProxClientConfig):
+class LCFLClientConfig(BaseClientConfig):
     """Client config for the LCFL algorithm.
 
     Parameters
@@ -121,6 +124,11 @@ class LCFLClientConfig(FedProxClientConfig):
         The number of epochs.
     lr : float, default 1e-2
         The learning rate.
+    **kwargs : dict, optional
+        Additional keyword arguments:
+
+        - ``verbose`` : int, default 1
+            The verbosity level.
 
     """
 
@@ -131,18 +139,19 @@ class LCFLClientConfig(FedProxClientConfig):
         batch_size: int,
         num_epochs: int,
         lr: float = 1e-2,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
             batch_size=batch_size,
             num_epochs=num_epochs,
             lr=lr,
-            vr=False,
+            **kwargs,
         )
         self.algorithm = "LCFL"
 
 
-@add_docstring(FedProxServer.__doc__.replace("FedProx", "LCFL"))
-class LCFLServer(FedProxServer):
+@add_docstring(BaseServer.__doc__.replace(_base_algorithm, "LCFL"))
+class LCFLServer(BaseServer):
 
     __name__ = "LCFLServer"
 
@@ -226,7 +235,8 @@ class LCFLServer(FedProxServer):
                         p.add_(m["parameters"][idx].div_(cluster_size).to(self.device))
 
     def train_federated(self, extra_configs: Optional[dict] = None) -> None:
-        """Federated (distributed) training, conducted on the clients and the server.
+        """Federated (distributed) training,
+        conducted on the clients and the server.
 
         Parameters
         ----------
@@ -245,40 +255,48 @@ class LCFLServer(FedProxServer):
         self._logger_manager.log_message("Training federated...")
         self._logger_manager.log_message("Warm Up...")
         self.n_iter = 0
-        for self.n_iter in range(self.config.num_warmup_iters):
-            selected_clients = list(range(self.config.num_clients))
-            with tqdm(
-                total=len(selected_clients),
-                desc=f"Warm Up Iter {self.n_iter+1}/{self.config.num_warmup_iters}",
-                unit="client",
-                mininterval=1.0,
-            ) as pbar:
-                for client_id in selected_clients:
-                    client = self._clients[client_id]
+        with tqdm(
+            range(self.config.num_warmup_iters),
+            total=self.config.num_warmup_iters,
+            desc=f"{self.config.algorithm} Warmup",
+            unit="iter",
+            mininterval=1.0,
+        ) as outer_pbar:
+            for self.n_iter in outer_pbar:
+                selected_clients = list(range(self.config.num_clients))
+                with tqdm(
+                    total=len(selected_clients),
+                    desc=f"Warm Up Iter {self.n_iter+1}/{self.config.num_warmup_iters}",
+                    unit="client",
+                    mininterval=1.0,
+                    disable=self.config.verbose < 1,
+                ) as pbar:
+                    for client_id in selected_clients:
+                        client = self._clients[client_id]
+                        if not self.config.local_warmup:
+                            self._communicate(client)
+                        client._update()
+                        if (self.n_iter + 1) % self.config.eval_every == 0:
+                            for part in self.dataset.data_parts:
+                                metrics = client.evaluate(part)
+                                metrics["cluster_id"] = -1
+                                # print(f"metrics: {metrics}")
+                                self._logger_manager.log_metrics(
+                                    client_id,
+                                    metrics,
+                                    step=self.n_iter + 1,
+                                    epoch=self.n_iter + 1,
+                                    part=part,
+                                )
+                        if not self.config.local_warmup:
+                            client._communicate(self)
+                        pbar.update(1)
+                    if (
+                        self.n_iter + 1
+                    ) % self.config.eval_every == 0 and not self.config.local_warmup:
+                        self.aggregate_client_metrics()
                     if not self.config.local_warmup:
-                        self._communicate(client)
-                    client._update()
-                    if (self.n_iter + 1) % self.config.eval_every == 0:
-                        for part in self.dataset.data_parts:
-                            metrics = client.evaluate(part)
-                            metrics["cluster_id"] = -1
-                            # print(f"metrics: {metrics}")
-                            self._logger_manager.log_metrics(
-                                client_id,
-                                metrics,
-                                step=self.n_iter + 1,
-                                epoch=self.n_iter + 1,
-                                part=part,
-                            )
-                    if not self.config.local_warmup:
-                        client._communicate(self)
-                    pbar.update(1)
-                if (
-                    self.n_iter + 1
-                ) % self.config.eval_every == 0 and not self.config.local_warmup:
-                    self.aggregate_client_metrics()
-                if not self.config.local_warmup:
-                    self._update()
+                        self._update()
 
         self._logger_manager.log_message("Perform clustering...")
         # for simplicity, we omit the transimission of client models
@@ -350,46 +368,51 @@ class LCFLServer(FedProxServer):
             "Perform federated training on each cluster..."
         )
         total_iters = self.config.num_warmup_iters + self.config.num_iters
-        for self.n_iter in range(
-            self.config.num_warmup_iters,
-            total_iters,
-        ):
-            for cluster_id in self._cluster_centers:
-                selected_clients = self._cluster_centers[cluster_id]["client_ids"]
-                with tqdm(
-                    total=len(selected_clients),
-                    desc=f"Iter {self.n_iter+1}/{total_iters} | Cluster {cluster_id}",
-                    unit="client",
-                    mininterval=1.0,
-                ) as pbar:
-                    for client_id in selected_clients:
-                        client = self._clients[client_id]
-                        self._communicate(client)
-                        client._update()
+        with tqdm(
+            range(self.config.num_warmup_iters, total_iters),
+            total=self.config.num_iters,
+            desc=f"{self.config.algorithm} Clustered Federated Training",
+            unit="iter",
+            mininterval=1.0,
+        ) as outer_pbar:
+            for self.n_iter in outer_pbar:
+                for cluster_id in self._cluster_centers:
+                    selected_clients = self._cluster_centers[cluster_id]["client_ids"]
+                    with tqdm(
+                        total=len(selected_clients),
+                        desc=f"Iter {self.n_iter+1}/{total_iters} | Cluster {cluster_id}",
+                        unit="client",
+                        mininterval=1.0,
+                    ) as pbar:
+                        for client_id in selected_clients:
+                            client = self._clients[client_id]
+                            self._communicate(client)
+                            client._update()
+                            if (self.n_iter + 1) % self.config.eval_every == 0:
+                                for part in self.dataset.data_parts:
+                                    metrics = client.evaluate(part)
+                                    metrics["cluster_id"] = cluster_id
+                                    # print(f"metrics: {metrics}")
+                                    self._logger_manager.log_metrics(
+                                        client_id,
+                                        metrics,
+                                        step=self.n_iter + 1,
+                                        epoch=self.n_iter + 1,
+                                        part=part,
+                                    )
+                            client._communicate(self)
+                            pbar.update(1)
                         if (self.n_iter + 1) % self.config.eval_every == 0:
-                            for part in self.dataset.data_parts:
-                                metrics = client.evaluate(part)
-                                metrics["cluster_id"] = cluster_id
-                                # print(f"metrics: {metrics}")
-                                self._logger_manager.log_metrics(
-                                    client_id,
-                                    metrics,
-                                    step=self.n_iter + 1,
-                                    epoch=self.n_iter + 1,
-                                    part=part,
-                                )
-                        client._communicate(self)
-                        pbar.update(1)
-                    if (self.n_iter + 1) % self.config.eval_every == 0:
-                        self.aggregate_client_metrics()
-                    self._update()
+                            self.aggregate_client_metrics()
+                        self._update()
 
         self._logger_manager.log_message("Federated training finished...")
         self._logger_manager.flush()
+        self._logger_manager.reset()
 
 
-@add_docstring(FedProxClient.__doc__.replace("FedProx", "LCFL"))
-class LCFLClient(FedProxClient):
+@add_docstring(BaseClient.__doc__.replace(_base_algorithm, "LCFL"))
+class LCFLClient(BaseClient):
 
     __name__ = "LCFLClient"
 
@@ -413,9 +436,4 @@ class LCFLClient(FedProxClient):
             "train_samples": len(self.train_loader.dataset),
             "metrics": self._metrics,
         }
-        if self.config.vr:
-            # currently, config.vr is always False
-            message["gradients"] = [
-                p.grad.detach().clone() for p in self.model.parameters()
-            ]
         target._received_messages.append(ClientMessage(**message))
