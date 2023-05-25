@@ -27,6 +27,8 @@ try:
         CACHED_DATA_DIR,
         MNIST_LABEL_MAP,
         CIFAR10_LABEL_MAP,
+        CIFAR10_MEAN,
+        CIFAR10_STD,
     )
     from fl_sim.utils._download_data import http_get
     from fl_sim.models import nn as mnn
@@ -43,6 +45,8 @@ except ModuleNotFoundError:
         CACHED_DATA_DIR,
         MNIST_LABEL_MAP,
         CIFAR10_LABEL_MAP,
+        CIFAR10_MEAN,
+        CIFAR10_STD,
     )
     from fl_sim.utils._download_data import http_get
     from fl_sim.models import nn as mnn
@@ -386,12 +390,9 @@ class FedRotatedMNIST(FedVisionDataset):
                 f"image_idx must be less than {total_num_images}, got {image_idx}"
             )
         if image_idx < len(self.indices["train"][client_idx]):
-            image = (
-                255
-                - self._train_data_dict[self._IMGAE][
-                    self.indices["train"][client_idx][image_idx]
-                ]
-            )
+            image = self._train_data_dict[self._IMGAE][
+                self.indices["train"][client_idx][image_idx]
+            ]
             label = self._train_data_dict[self._LABEL][
                 self.indices["train"][client_idx][image_idx]
             ]
@@ -403,12 +404,9 @@ class FedRotatedMNIST(FedVisionDataset):
             )
         else:
             image_idx -= len(self.indices["train"][client_idx])
-            image = (
-                255
-                - self._test_data_dict[self._IMGAE][
-                    self.indices["test"][client_idx][image_idx]
-                ]
-            )
+            image = self._test_data_dict[self._IMGAE][
+                self.indices["test"][client_idx][image_idx]
+            ]
             label = self._test_data_dict[self._LABEL][
                 self.indices["test"][client_idx][image_idx]
             ]
@@ -475,8 +473,10 @@ class FedRotatedCIFAR10(FedVisionDataset):
         self.DEFAULT_TRAIN_CLIENTS_NUM = self.num_clients
         self.DEFAULT_TEST_CLIENTS_NUM = self.num_clients
 
-        self.DEFAULT_TRAIN_FILE = [f"data_batch_{i}" for i in range(1, 6)]
-        self.DEFAULT_TEST_FILE = ["test_batch"]
+        self.DEFAULT_TRAIN_FILE = [
+            f"cifar-10-batches-py/data_batch_{i}" for i in range(1, 6)
+        ]
+        self.DEFAULT_TEST_FILE = ["cifar-10-batches-py/test_batch"]
         self._IMGAE = "image"
         self._LABEL = "label"
 
@@ -487,10 +487,7 @@ class FedRotatedCIFAR10(FedVisionDataset):
         self.transform = transforms.Compose(
             [
                 # transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=(0.4914, 0.4822, 0.4465),
-                    std=(0.2023, 0.1994, 0.2010),
-                ),
+                transforms.Normalize(mean=CIFAR10_MEAN, std=CIFAR10_STD),
             ]
         )
 
@@ -627,11 +624,16 @@ class FedRotatedCIFAR10(FedVisionDataset):
 
         train_ds = torchdata.TensorDataset(
             self.transform(
-                torch.from_numpy(
-                    self._train_data_dict[self._IMGAE][train_slice]
-                ).float()
-            ).unsqueeze(1),
-            torch.from_numpy(self._train_data_dict[self._LABEL][train_slice]).long(),
+                torch.div(
+                    torch.from_numpy(
+                        self._train_data_dict[self._IMGAE][train_slice].copy()
+                    ).float(),
+                    255,
+                )
+            ),
+            torch.from_numpy(
+                self._train_data_dict[self._LABEL][train_slice].copy()
+            ).long(),
         )
         train_dl = torchdata.DataLoader(
             dataset=train_ds,
@@ -642,9 +644,16 @@ class FedRotatedCIFAR10(FedVisionDataset):
 
         test_ds = torchdata.TensorDataset(
             self.transform(
-                torch.from_numpy(self._test_data_dict[self._IMGAE][test_slice]).float()
-            ).unsqueeze(1),
-            torch.from_numpy(self._test_data_dict[self._LABEL][test_slice]).long(),
+                torch.div(
+                    torch.from_numpy(
+                        self._test_data_dict[self._IMGAE][test_slice].copy()
+                    ).float(),
+                    255,
+                )
+            ),
+            torch.from_numpy(
+                self._test_data_dict[self._LABEL][test_slice].copy()
+            ).long(),
         )
         test_dl = torchdata.DataLoader(
             dataset=test_ds,
