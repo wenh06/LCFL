@@ -1,7 +1,6 @@
 """
 """
 
-import warnings
 from copy import deepcopy
 from typing import List, Optional, Dict, Any
 
@@ -60,6 +59,8 @@ class LCFLServerConfig(BaseServerConfig):
         The number of (outer) iterations.
     num_clients : int
         The number of clients.
+    clients_sample_ratio : float, default 1
+        The ratio of clients to participate in each round.
     cluster_method : str, default "kmedoids"
         The clustering method to use based on the distance matrix.
         Currently only support "kmedoids" and "dbscan".
@@ -90,20 +91,16 @@ class LCFLServerConfig(BaseServerConfig):
         num_clusters: int,
         num_iters: int,
         num_clients: int,
+        clients_sample_ratio: float = 1,
         cluster_method: str = "kmedoids",
         num_warmup_iters: int = 10,
         local_warmup: bool = False,
         **kwargs: Any,
     ) -> None:
-        if kwargs.pop("clients_sample_ratio", None) is not None:
-            warnings.warn(
-                "`clients_sample_ratio` is not used in LCFL, and always set to 1",
-                RuntimeWarning,
-            )
         super().__init__(
             num_iters,
             num_clients,
-            clients_sample_ratio=1,
+            clients_sample_ratio=clients_sample_ratio,
             **kwargs,
         )
         self.algorithm = "LCFL"
@@ -111,6 +108,11 @@ class LCFLServerConfig(BaseServerConfig):
         self.cluster_method = cluster_method
         self.num_warmup_iters = num_warmup_iters
         self.local_warmup = local_warmup
+
+        if self.clients_sample_ratio != 1:
+            # TODO: support clients_sample_ratio != 1
+            # and remove this assertion
+            raise NotImplementedError("Not implemented for clients_sample_ratio != 1")
 
 
 class LCFLClientConfig(BaseClientConfig):
