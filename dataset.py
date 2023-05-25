@@ -262,11 +262,16 @@ class FedRotatedMNIST(FedVisionDataset):
 
         train_ds = torchdata.TensorDataset(
             self.transform(
-                torch.from_numpy(
-                    self._train_data_dict[self._IMGAE][train_slice]
-                ).float()
+                torch.div(
+                    torch.from_numpy(
+                        self._train_data_dict[self._IMGAE][train_slice].copy()
+                    ).float(),
+                    255,
+                )
             ).unsqueeze(1),
-            torch.from_numpy(self._train_data_dict[self._LABEL][train_slice]).long(),
+            torch.from_numpy(
+                self._train_data_dict[self._LABEL][train_slice].copy()
+            ).long(),
         )
         train_dl = torchdata.DataLoader(
             dataset=train_ds,
@@ -277,9 +282,16 @@ class FedRotatedMNIST(FedVisionDataset):
 
         test_ds = torchdata.TensorDataset(
             self.transform(
-                torch.from_numpy(self._test_data_dict[self._IMGAE][test_slice]).float()
+                torch.div(
+                    torch.from_numpy(
+                        self._test_data_dict[self._IMGAE][test_slice].copy()
+                    ).float(),
+                    255,
+                )
             ).unsqueeze(1),
-            torch.from_numpy(self._test_data_dict[self._LABEL][test_slice]).long(),
+            torch.from_numpy(
+                self._test_data_dict[self._LABEL][test_slice].copy()
+            ).long(),
         )
         test_dl = torchdata.DataLoader(
             dataset=test_ds,
@@ -321,11 +333,13 @@ class FedRotatedMNIST(FedVisionDataset):
         }
 
     def download_if_needed(self) -> None:
-        # check if mirror "lecun" is available
-        if requests.get(self.mirror["lecun"]).status_code == 200:
-            base_url = self.mirror["lecun"]
+        default_mirror = "lecun"
+        alt_mirror = [k for k in self.mirror if k != default_mirror][0]
+        # check if default_mirror is available
+        if requests.get(self.mirror[default_mirror]).status_code == 200:
+            base_url = self.mirror[default_mirror]
         else:
-            base_url = self.mirror["aws"]
+            base_url = self.mirror[alt_mirror]
         for key, fn in self.url.items():
             url = posixpath.join(base_url, fn)
             local_fn = self.datadir / fn
