@@ -125,9 +125,11 @@ class FedRotatedMNIST(FedVisionDataset):
         # set transforms for creating dataset
         self.transform = transforms.Compose(
             [
+                ImageArrayToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,)),
             ]
         )
+        self.target_transform = transforms.Compose([CategoricalLabelToTensor()])
 
         # load data
         self._train_data_dict = {}
@@ -266,16 +268,11 @@ class FedRotatedMNIST(FedVisionDataset):
 
         train_ds = torchdata.TensorDataset(
             self.transform(
-                torch.div(
-                    torch.from_numpy(
-                        self._train_data_dict[self._IMGAE][train_slice].copy()
-                    ).float(),
-                    255,
-                )
+                self._train_data_dict[self._IMGAE][train_slice].copy()
             ).unsqueeze(1),
-            torch.from_numpy(
+            self.target_transform(
                 self._train_data_dict[self._LABEL][train_slice].copy()
-            ).long(),
+            ),
         )
         train_dl = torchdata.DataLoader(
             dataset=train_ds,
@@ -286,16 +283,9 @@ class FedRotatedMNIST(FedVisionDataset):
 
         test_ds = torchdata.TensorDataset(
             self.transform(
-                torch.div(
-                    torch.from_numpy(
-                        self._test_data_dict[self._IMGAE][test_slice].copy()
-                    ).float(),
-                    255,
-                )
+                self._test_data_dict[self._IMGAE][test_slice].copy()
             ).unsqueeze(1),
-            torch.from_numpy(
-                self._test_data_dict[self._LABEL][test_slice].copy()
-            ).long(),
+            self.target_transform(self._test_data_dict[self._LABEL][test_slice].copy()),
         )
         test_dl = torchdata.DataLoader(
             dataset=test_ds,
@@ -486,10 +476,11 @@ class FedRotatedCIFAR10(FedVisionDataset):
         # set transforms for creating dataset
         self.transform = transforms.Compose(
             [
-                # transforms.ToTensor(),
+                ImageArrayToTensor(),
                 transforms.Normalize(mean=CIFAR10_MEAN, std=CIFAR10_STD),
             ]
         )
+        self.target_transform = transforms.Compose([CategoricalLabelToTensor()])
 
         # load data
         self._train_data_dict = {
@@ -623,17 +614,10 @@ class FedRotatedCIFAR10(FedVisionDataset):
             test_slice = self.indices["test"][client_idx]
 
         train_ds = torchdata.TensorDataset(
-            self.transform(
-                torch.div(
-                    torch.from_numpy(
-                        self._train_data_dict[self._IMGAE][train_slice].copy()
-                    ).float(),
-                    255,
-                )
-            ),
-            torch.from_numpy(
+            self.transform(self._train_data_dict[self._IMGAE][train_slice].copy()),
+            self.target_transform(
                 self._train_data_dict[self._LABEL][train_slice].copy()
-            ).long(),
+            ),
         )
         train_dl = torchdata.DataLoader(
             dataset=train_ds,
@@ -643,17 +627,8 @@ class FedRotatedCIFAR10(FedVisionDataset):
         )
 
         test_ds = torchdata.TensorDataset(
-            self.transform(
-                torch.div(
-                    torch.from_numpy(
-                        self._test_data_dict[self._IMGAE][test_slice].copy()
-                    ).float(),
-                    255,
-                )
-            ),
-            torch.from_numpy(
-                self._test_data_dict[self._LABEL][test_slice].copy()
-            ).long(),
+            self.transform(self._test_data_dict[self._IMGAE][test_slice].copy()),
+            self.target_transform(self._test_data_dict[self._LABEL][test_slice].copy()),
         )
         test_dl = torchdata.DataLoader(
             dataset=test_ds,
@@ -764,6 +739,35 @@ class FixedDegreeRotation(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return rotate(x, self.degree)
+
+
+class ImageArrayToTensor(torch.nn.Module):
+    """Convert image arrays to tensors in range [0, 1].
+
+    Image arrays are in the shape of (N, C, H, W), or (N, H, W)
+    or (C, H, W), or (H, W); and of dtype np.uint8.
+
+    """
+
+    __name__ = "ImageArrayToTensor"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(x).float().div(255)
+
+
+class CategoricalLabelToTensor(torch.nn.Module):
+    """Convert categorical labels to tensors."""
+
+    __name__ = "CategoricalLabelToTensor"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, y: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(y).long()
 
 
 def distribute_images(
