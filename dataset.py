@@ -13,7 +13,7 @@ import pickle
 import posixpath
 import gzip
 from pathlib import Path
-from typing import Optional, Union, List, Tuple, Dict
+from typing import Optional, Union, List, Tuple, Dict, Callable
 
 import numpy as np
 import requests
