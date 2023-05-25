@@ -1,0 +1,26 @@
+strategy:
+  matrix:
+    num_clients:
+    - 1200
+    - 2400
+    - 4800
+    seed:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+
+algorithm:
+  name: IFCA
+  server:
+    num_clusters: 4
+    num_clients: ${{ matrix.num_clients }}
+    clients_sample_ratio: 1.0
+    num_iters: 60
+  client:
+    lr: 0.05
+    num_epochs: 10
+dataset: FedRotatedMNIST
+model: cnn_femmist_tiny
+seed: ${{ matrix.seed }}

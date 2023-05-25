@@ -1,0 +1,24 @@
+strategy:
+  matrix:
+    seed:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+
+algorithm:
+  name: LCFL
+  server:
+    num_clusters: 2
+    num_clients: 200
+    clients_sample_ratio: 1.0
+    num_iters: 100
+    num_warmup_iters: 5
+    local_warmup: false
+  client:
+    lr: 0.05
+    num_epochs: 5
+dataset: FedRotatedMNIST
+model: cnn_femmist_tiny
+seed: ${{ matrix.seed }}
