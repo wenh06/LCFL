@@ -194,7 +194,10 @@ class IFCAServer(BaseServer):
             for p, p_delta in zip(
                 cluster["center_model_params"], m["delta_parameters"]
             ):
-                p.data.add_(p_delta.data, alpha=1 / cluster_sizes[cluster_id])
+                p.data.add_(
+                    p_delta.data.detach().clone().to(self.device),
+                    alpha=1 / cluster_sizes[cluster_id],
+                )
             cluster["client_ids"].append(m["client_id"])
 
 
