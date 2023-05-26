@@ -5,15 +5,16 @@ Reads in a yaml file with experiment parameters and runs the experiment.
 """
 
 import argparse
+import re
 import sys
 from collections import OrderedDict
 from copy import deepcopy
 from itertools import product
 from pathlib import Path
+from typing import List
 
 sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
-import yaml
 from fl_sim.data_processing import (  # noqa: F401
     FedCIFAR100,
     FedEMNIST,
@@ -22,13 +23,15 @@ from fl_sim.data_processing import (  # noqa: F401
     FedProxFEMNIST,
     FedProxMNIST,
 )  # noqa: F401
+from torch_ecg.cfg import CFG
+import yaml
 
 from dataset import FedRotatedMNIST, FedRotatedCIFAR10  # noqa: F401
 from algorithm import LCFLServer, LCFLServerConfig, LCFLClientConfig  # noqa: F401
 from ifca import IFCAServer, IFCAServerConfig, IFCAClientConfig  # noqa: F401
 
 
-def parse_args() -> dict:
+def parse_args() -> List[CFG]:
     parser = argparse.ArgumentParser(
         description="LCFL Experiment Runner",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -55,17 +58,20 @@ def parse_args() -> dict:
     # further process configs to a list of configs
     # by replacing values of the pattern ${{ matrix.key }} with the value of key
     # specified by configs["strategy"]["matrix"][key]
-    matrix = OrderedDict(configs["strategy"]["matrix"])
-    repalcements = list(product(*matrix.values()))
-    keys = list(matrix.keys())
+    strategy_matrix = OrderedDict(configs["strategy"]["matrix"])
+    repalcements = list(product(*strategy_matrix.values()))
+    keys = list(strategy_matrix.keys())
     configs = []
-    for r in repalcements:
+    for rep in repalcements:
         new_file_content = deepcopy(file_content)
-        for k, v in zip(keys, r):
+        for k, v in zip(keys, rep):
             # replace all patterns of the form ${{ matrix.k }} in file_content with v
-            new_file_content = new_file_content.replace(
-                f"${{{{ matrix.{k} }}}}", str(v)
-            )
+            # pattern = re.compile(f"\${{{{ matrix.{k} }}}}")
+            # allow for arbitrary number (can be 0) of spaces around matrix.k
+            pattern = re.compile(f"\\${{{{(?:\\s+)?matrix.{k}(?:\\s+)?}}}}")
+            new_file_content = re.sub(pattern, str(v), new_file_content)
+        # replace pattern of the form ${{ xx.xx... }} with corresponding value
+        # TODO...
         new_config = yaml.safe_load(new_file_content)
         new_config.pop("strategy")
         configs.append(new_config)
@@ -73,8 +79,56 @@ def parse_args() -> dict:
     return configs
 
 
-def single_run(config: dict):
-    pass
+def single_run(config: CFG):
+    # run a single experiment
+    config = CFG(config)
+
+    algorithm_pool = CFG(
+        {
+            "LCFL": {
+                "server_config": LCFLServerConfig,
+                "client_config": LCFLClientConfig,
+                "server": LCFLServer,
+            },
+            "IFCA": {
+                "server_config": IFCAServerConfig,
+                "client_config": IFCAClientConfig,
+                "server": IFCAServer,
+            },
+        }
+    )
+
+    dataset_pool = {
+        c.__name__: c
+        for c in [
+            FedCIFAR100,
+            FedEMNIST,
+            FedMNIST,
+            FedShakespeare,
+            FedProxFEMNIST,
+            FedProxMNIST,
+            FedRotatedMNIST,
+            FedRotatedCIFAR10,
+        ]
+    }
+
+    # dataset and model selection
+    ds_cls = dataset_pool[config.dataset.pop("name")]
+    ds = ds_cls(**(config.dataset))
+    model = ds.candidate_models[config.model.pop("name")]
+
+    # server and client configs
+    server_config_cls = algorithm_pool[config.algorithm.name]["server_config"]
+    client_config_cls = algorithm_pool[config.algorithm.name]["client_config"]
+    server_config = server_config_cls(**(config.algorithm.server))
+    client_config = client_config_cls(**(config.algorithm.client))
+
+    # setup the experiment
+    server_cls = algorithm_pool[config.algorithm.name]["server"]
+    s = server_cls(model, ds, server_config, client_config)
+
+    # execute the experiment
+    s.train_federated()
 
 
 def main():
