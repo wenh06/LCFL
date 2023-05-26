@@ -21,6 +21,12 @@ algorithm:
   client:
     lr: 0.05
     num_epochs: 10
-dataset: FedRotatedMNIST
-model: cnn_femmist_tiny
+dataset:
+  name: FedRotatedMNIST
+  datadir: null  # default dir
+  num_clusters: ${{ algorithm.server.num_clusters }}
+  num_clients: ${{ algorithm.server.num_clients }}
+  transform: none  # null for default dynamic transform (augmentation)
+model:
+  name: cnn_femmist_tiny
 seed: ${{ matrix.seed }}
