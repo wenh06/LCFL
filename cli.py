@@ -42,7 +42,6 @@ def parse_args() -> List[CFG]:
     )
     parser.add_argument(
         "config_file_path",
-        nargs=1,
         type=str,
         help="Config file (.yml or .yaml file) path",
     )
@@ -51,7 +50,7 @@ def parse_args() -> List[CFG]:
     config_file_path = Path(args["config_file_path"]).resolve()
 
     assert config_file_path.exists(), f"Config file {config_file_path} not found"
-    assert config_file_path.suffix in ["yml", "yaml"], (
+    assert config_file_path.suffix in [".yml", ".yaml"], (
         f"Config file {config_file_path} must be a .yml or .yaml file, "
         f"but got {config_file_path.suffix}."
     )
@@ -179,6 +178,7 @@ def main():
 
 if __name__ == "__main__":
     # typical usage:
-    # replace {{config.yml}} with the path to your config file
+    # replace {{config.yml}} with the path to your config file,
+    # e.g. ./configs/lcfl-rot-mnist.yml
     # nohup python -u cli.py {{config.yml}} > .logs/cli.log 2>&1 & echo $! > .logs/cli.pid
     main()
