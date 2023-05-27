@@ -11,7 +11,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from itertools import product
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
@@ -52,7 +52,11 @@ def parse_args() -> List[CFG]:
         f"but got {config_file_path.suffix}."
     )
 
-    file_content = config_file_path.read_text()
+    return parse_config_file(config_file_path)
+
+
+def parse_config_file(config_file_path: Union[str, Path]) -> List[CFG]:
+    file_content = Path(config_file_path).read_text()
 
     configs = yaml.safe_load(file_content)
     # further process configs to a list of configs
@@ -70,9 +74,24 @@ def parse_args() -> List[CFG]:
             # allow for arbitrary number (can be 0) of spaces around matrix.k
             pattern = re.compile(f"\\${{{{(?:\\s+)?matrix.{k}(?:\\s+)?}}}}")
             new_file_content = re.sub(pattern, str(v), new_file_content)
+        new_config = CFG(yaml.safe_load(new_file_content))
+        new_config.pop("strategy")
         # replace pattern of the form ${{ xx.xx... }} with corresponding value
-        # TODO...
-        new_config = yaml.safe_load(new_file_content)
+        pattern = re.compile(
+            "\\$\\{\\{ (?:\\s+)?(?P<repkey>\\w[\\.\\w]+\\w)(?:\\s+)?\\}\\}"
+        )
+        matches = re.finditer(pattern, new_file_content)
+        for match in matches:
+            repkey = match.group("repkey")
+            try:
+                repval = eval(f"new_config.{repkey}")
+            except Exception:
+                raise ValueError(f"Invalid key {repkey} in {config_file_path}")
+            rep_pattern = re.compile(f"\\$\\{{{{(?:\\s+)?{repkey}(?:\\s+)?}}}}")
+            new_file_content = re.sub(
+                rep_pattern, str(repval), new_file_content, count=1
+            )
+        new_config = CFG(yaml.safe_load(new_file_content))
         new_config.pop("strategy")
         configs.append(new_config)
 
