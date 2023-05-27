@@ -19,7 +19,7 @@ algorithm:
     clients_sample_ratio: 1.0
     num_iters: 60
   client:
-    lr: 0.05
+    lr: 0.02
     num_epochs: 10
     batch_size: null  # null for default batch size
 dataset:

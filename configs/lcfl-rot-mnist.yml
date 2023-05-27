@@ -21,7 +21,7 @@ algorithm:
     num_warmup_iters: 5
     local_warmup: false
   client:
-    lr: 0.05
+    lr: 0.02
     num_epochs: 10
     batch_size: null  # null for default batch size
 dataset:
