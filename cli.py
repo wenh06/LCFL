@@ -15,20 +15,24 @@ from typing import List, Union
 
 sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
-from fl_sim.data_processing import (  # noqa: F401
+from fl_sim.data_processing import (
     FedCIFAR100,
     FedEMNIST,
     FedMNIST,
     FedShakespeare,
     FedProxFEMNIST,
     FedProxMNIST,
-)  # noqa: F401
+)
 from torch_ecg.cfg import CFG
 import yaml
 
-from dataset import FedRotatedMNIST, FedRotatedCIFAR10  # noqa: F401
-from algorithm import LCFLServer, LCFLServerConfig, LCFLClientConfig  # noqa: F401
-from ifca import IFCAServer, IFCAServerConfig, IFCAClientConfig  # noqa: F401
+from dataset import FedRotatedMNIST, FedRotatedCIFAR10
+from algorithm import LCFLServer, LCFLServerConfig, LCFLClientConfig
+from ifca import IFCAServer, IFCAServerConfig, IFCAClientConfig
+
+
+# create log directory if it does not exist
+(Path(__file__).parent / ".logs").mkdir(exist_ok=True, parents=True)
 
 
 def parse_args() -> List[CFG]:
@@ -163,8 +167,18 @@ def single_run(config: CFG):
     # execute the experiment
     s.train_federated()
 
+    # destroy the experiment
+    del s, ds, model
+
 
 def main():
     configs = parse_args()
     for config in configs:
         single_run(config)
+
+
+if __name__ == "__main__":
+    # typical usage:
+    # replace {{config.yml}} with the path to your config file
+    # nohup python -u cli.py {{config.yml}} > .logs/cli.log 2>&1 & echo $! > .logs/cli.pid
+    main()
