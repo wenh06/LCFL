@@ -21,6 +21,7 @@ algorithm:
   client:
     lr: 0.05
     num_epochs: 10
+    batch_size: null  # null for default batch size
 dataset:
   name: FedRotatedMNIST
   datadir: null  # default dir

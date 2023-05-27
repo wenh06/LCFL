@@ -136,6 +136,12 @@ def single_run(config: CFG):
     ds = ds_cls(**(config.dataset))
     model = ds.candidate_models[config.model.pop("name")]
 
+    if (
+        "batch_size" not in config.algorithm.client
+        or config.algorithm.client.batch_size is None
+    ):
+        config.algorithm.client.batch_size = ds.DEFAULT_BATCH_SIZE
+
     # server and client configs
     server_config_cls = algorithm_pool[config.algorithm.name]["server_config"]
     client_config_cls = algorithm_pool[config.algorithm.name]["client_config"]
@@ -144,7 +150,15 @@ def single_run(config: CFG):
 
     # setup the experiment
     server_cls = algorithm_pool[config.algorithm.name]["server"]
-    s = server_cls(model, ds, server_config, client_config)
+    s = server_cls(
+        model,
+        ds,
+        server_config,
+        client_config,
+        lazy=False,
+    )
+
+    # s._setup_clients()
 
     # execute the experiment
     s.train_federated()
