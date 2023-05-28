@@ -69,6 +69,9 @@ class LCFLServerConfig(BaseServerConfig):
         The number of warmup iterations.
     local_warmup : bool, default False
         Whether to use local warmup or federated warmup.
+    warmup_clients_sample_ratio : float, optional
+        The ratio of clients to participate in each warmup round.
+        If not specified, will use the same ratio as ``clients_sample_ratio``.
     **kwargs : dict, optional
         Additional keyword arguments:
 
@@ -100,6 +103,7 @@ class LCFLServerConfig(BaseServerConfig):
         cluster_method: str = "kmedoids",
         num_warmup_iters: int = 10,
         local_warmup: bool = False,
+        warmup_clients_sample_ratio: Optional[float] = None,
         **kwargs: Any,
     ) -> None:
         if kwargs.pop("vr", None) is not None:
@@ -118,11 +122,9 @@ class LCFLServerConfig(BaseServerConfig):
         self.cluster_method = cluster_method
         self.num_warmup_iters = num_warmup_iters
         self.local_warmup = local_warmup
-
-        if self.clients_sample_ratio != 1:
-            # TODO: support clients_sample_ratio != 1
-            # and remove this assertion
-            raise NotImplementedError("Not implemented for clients_sample_ratio != 1")
+        self.warmup_clients_sample_ratio = (
+            warmup_clients_sample_ratio or clients_sample_ratio
+        )
 
 
 class LCFLClientConfig(BaseClientConfig):
@@ -247,7 +249,9 @@ class LCFLServer(BaseServer):
             # federated training on each cluster
             for cluster_id in self._cluster_centers:
                 cluster_center = self._cluster_centers[cluster_id]
-                cluster_size = len(cluster_center["client_ids"])
+                cluster_size = int(
+                    len(cluster_center["client_ids"]) * self.config.clients_sample_ratio
+                )
                 # average the cluster center model using received parameters
                 for idx, p in enumerate(cluster_center["center_model"].parameters()):
                     p.zero_()
@@ -307,7 +311,10 @@ class LCFLServer(BaseServer):
             mininterval=1.0,
         ) as outer_pbar:
             for self.n_iter in outer_pbar:
-                selected_clients = list(range(self.config.num_clients))
+                # selected_clients = list(range(self.config.num_clients))
+                selected_clients = self._sample_clients(
+                    clients_sample_ratio=self.config.warmup_clients_sample_ratio
+                )
                 with tqdm(
                     total=len(selected_clients),
                     desc=f"Warm Up Iter {self.n_iter+1}/{self.config.num_warmup_iters}",
@@ -432,7 +439,11 @@ class LCFLServer(BaseServer):
         ) as outer_pbar:
             for self.n_iter in outer_pbar:
                 for cluster_id in self._cluster_centers:
-                    selected_clients = self._cluster_centers[cluster_id]["client_ids"]
+                    # selected_clients = self._cluster_centers[cluster_id]["client_ids"]
+                    selected_clients = self._sample_clients(
+                        subset=self._cluster_centers[cluster_id]["client_ids"],
+                        clients_sample_ratio=self.config.clients_sample_ratio,
+                    )
                     with tqdm(
                         total=len(selected_clients),
                         desc=f"Iter {self.n_iter+1}/{total_iters} | Cluster {cluster_id}",

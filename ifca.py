@@ -11,7 +11,7 @@ from copy import deepcopy
 from typing import List, Dict, Any
 
 import torch
-from torch_ecg.utils.misc import add_docstring
+from torch_ecg.utils.misc import add_docstring, list_sum
 
 try:
     from fl_sim.nodes import ClientMessage
@@ -96,11 +96,6 @@ class IFCAServerConfig(BaseServerConfig):
         self.algorithm = "IFCA"
         self.num_clusters = num_clusters
 
-        if self.clients_sample_ratio != 1:
-            # TODO: support clients_sample_ratio != 1
-            # and remove this assertion
-            raise NotImplementedError("Not implemented for clients_sample_ratio != 1")
-
 
 class IFCAClientConfig(BaseClientConfig):
     """Client config for the IFCA algorithm.
@@ -163,7 +158,7 @@ class IFCAServer(BaseServer):
                 "center_model_params": [
                     p.detach().clone() for p in self.model.parameters()
                 ],
-                "client_ids": [],  # not used currently
+                "client_ids": [],
             }
             for cluster_id in range(self.config.num_clusters)
         }
@@ -195,12 +190,30 @@ class IFCAServer(BaseServer):
     @torch.no_grad()
     def update(self) -> None:
         """Update cluster centers"""
+        # cache the client ids of each cluster of the previous iteration
+        prev_client_ids = {
+            cluster_id: deepcopy(cluster["client_ids"])
+            for cluster_id, cluster in self._cluster_centers.items()
+        }
+        # reset the list of client ids of each cluster
+        for cluster_id, cluster in self._cluster_centers.items():
+            cluster["client_ids"] = []
         # check the size of each cluster from the received messages
         cluster_sizes = {
             cluster_id: 0 for cluster_id in range(self.config.num_clusters)
         }
         for m in self._received_messages:
             cluster_sizes[m["cluster_id"]] += 1
+            self._cluster_centers[m["cluster_id"]]["client_ids"].append(m["client_id"])
+        # if a client in some cluster does not participate in this round,
+        # add it back to the cluster
+        collected_client_ids = list_sum(
+            (cluster["client_ids"] for cluster in self._cluster_centers.values())
+        )
+        for cluster_id, cluster in self._cluster_centers.items():
+            for client_id in prev_client_ids[cluster_id]:
+                if client_id not in collected_client_ids:
+                    cluster["client_ids"].append(client_id)
         # update the cluster centers via averaging the delta_parameters from each client
         for m in self._received_messages:
             cluster_id = m["cluster_id"]
