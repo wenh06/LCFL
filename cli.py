@@ -5,6 +5,7 @@ Reads in a yaml file with experiment parameters and runs the experiment.
 """
 
 import argparse
+import os
 import re
 import sys
 from collections import OrderedDict
@@ -62,6 +63,12 @@ def parse_config_file(config_file_path: Union[str, Path]) -> List[CFG]:
     file_content = Path(config_file_path).read_text()
 
     configs = yaml.safe_load(file_content)
+
+    # set env if specified
+    if configs.get("env", None) is not None:
+        for k, v in configs["env"].items():
+            os.environ[k] = str(v)
+
     # further process configs to a list of configs
     # by replacing values of the pattern ${{ matrix.key }} with the value of key
     # specified by configs["strategy"]["matrix"][key]
@@ -133,6 +140,14 @@ def single_run(config: CFG):
             FedRotatedCIFAR10,
         ]
     }
+
+    # set random seed
+    seed = config.pop("seed", None)  # global seed
+    if config.dataset.get("seed", None) is None:
+        config.dataset.seed = seed
+    if config.algorithm.server.get("seed", None) is None:
+        config.algorithm.server.seed = seed
+    assert config.dataset.seed is not None and config.algorithm.server.seed is not None
 
     # dataset and model selection
     ds_cls = dataset_pool[config.dataset.pop("name")]

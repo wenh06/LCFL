@@ -20,6 +20,10 @@ algorithm:
     lr: 0.03
     num_epochs: 5
     batch_size: null  # null for default batch size
+    scheduler:
+      name: step
+      step_size: 1
+      gamma: 0.99
 dataset:
   name: FedRotatedMNIST
   datadir: null  # default dir

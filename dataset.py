@@ -78,6 +78,12 @@ class FedRotatedMNIST(FedVisionDataset):
     num_clients : int, default 4800
         Number of clients to simulate.
         Typical values are 1200, 2400, 4800.
+    transform : str or callable, default 'none'
+        Transform (augmentation) to apply to the dataset.
+        If 'none', no augmentation is applied,
+        only the normalization transform is applied.
+    seed : int, default 0
+        Random seed for reproducibility.
 
     References
     ----------
@@ -94,11 +100,12 @@ class FedRotatedMNIST(FedVisionDataset):
         num_clusters: int = 4,
         num_clients: int = 4800,
         transform: Optional[Union[str, Callable]] = "none",
+        seed: int = 0,
     ) -> None:
         self.num_clusters = num_clusters
         self.num_clients = num_clients
         assert self.num_clients % self.num_clusters == 0
-        super().__init__(datadir, transform)
+        super().__init__(datadir=datadir, transform=transform, seed=seed)
 
     def _preload(self, datadir: Optional[Union[str, Path]] = None) -> None:
         default_datadir = CACHED_DATA_DIR / "fed-rotated-mnist"
@@ -433,6 +440,12 @@ class FedRotatedCIFAR10(FedVisionDataset):
         Number of clusters to partition the dataset into.
     num_clients : int, default 200
         Number of clients to simulate.
+    transform : str or callable, default 'none'
+        Transform (augmentation) to apply to the dataset.
+        If 'none', no augmentation is applied,
+        only the normalization transform is applied.
+    seed : int, default 0
+        Random seed for reproducibility.
 
     References
     ----------
@@ -449,11 +462,12 @@ class FedRotatedCIFAR10(FedVisionDataset):
         num_clusters: int = 2,
         num_clients: int = 200,
         transform: Optional[Union[str, Callable]] = "none",
+        seed: int = 0,
     ) -> None:
         self.num_clusters = num_clusters
         self.num_clients = num_clients
         assert self.num_clients % self.num_clusters == 0
-        super().__init__(datadir=datadir, transform=transform)
+        super().__init__(datadir=datadir, transform=transform, seed=seed)
 
     def _preload(self, datadir: Optional[Union[str, Path]] = None) -> None:
         default_datadir = CACHED_DATA_DIR / "fed-rotated-cifar10"

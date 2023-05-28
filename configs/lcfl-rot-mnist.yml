@@ -24,6 +24,8 @@ algorithm:
     lr: 0.02
     num_epochs: 10
     batch_size: null  # null for default batch size
+    scheduler:
+      name: none
 dataset:
   name: FedRotatedMNIST
   datadir: null  # default dir
