@@ -501,16 +501,10 @@ class FedRotatedCIFAR10(FedVisionDataset):
             # set dynamic transform for train set
             self.transform = transforms.Compose(
                 [
-                    # `ToPILImage` is used since we further need
-                    # `ToTensor` to normalize the image which does not
-                    # accept `torch.Tensor` as input.
-                    transforms.ToPILImage(),
                     transforms.AutoAugment(
-                        # accepts `torch.Tensor` or `PIL.Image` as input,
-                        # ** requiring** `uint8` input data type.
                         policy=transforms.AutoAugmentPolicy.CIFAR10,
                     ),
-                    transforms.ToTensor(),
+                    ImageTensorScale(),
                     transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
                 ]
             )
@@ -721,6 +715,8 @@ class FedRotatedCIFAR10(FedVisionDataset):
         """
         return {
             "cnn_cifar": mnn.CNNCifar(num_classes=self.n_class),
+            "cnn_cifar_small": mnn.CNNCifar_Small(num_classes=self.n_class),
+            "cnn_cifar_tiny": mnn.CNNCifar_Tiny(num_classes=self.n_class),
             "resnet10": mnn.ResNet10(num_classes=self.n_class),
         }
 
@@ -837,7 +833,7 @@ class FixedDegreeRotation(torch.nn.Module):
 class ImageArrayToTensor(torch.nn.Module):
     """Convert image arrays to tensors in range [0, 1].
 
-    Image arrays are in the shape of (N, C, H, W), or (N, H, W)
+    Image arrays are of shape of (N, C, H, W), or (N, H, W)
     or (C, H, W), or (H, W); and of dtype np.uint8.
 
     """
@@ -849,6 +845,23 @@ class ImageArrayToTensor(torch.nn.Module):
 
     def forward(self, x: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(x).float().div(255)
+
+
+class ImageTensorScale(torch.nn.Module):
+    """Scale image tensor to range [0, 1].
+
+    Image tensor is assumed to be of shape (N, C, H, W),
+    or (N, H, W) or (C, H, W), or (H, W); and of dtype torch.uint8.
+
+    """
+
+    __name__ = "ImageTensorScale"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x.float().div(255)
 
 
 class CategoricalLabelToTensor(torch.nn.Module):

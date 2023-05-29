@@ -30,5 +30,5 @@ dataset:
   num_clients: ${{ algorithm.server.num_clients }}
   transform: null  # null for default dynamic transform (augmentation)
 model:
-  name: cnn_cifar
+  name: cnn_cifar_small
 seed: ${{ matrix.seed }}

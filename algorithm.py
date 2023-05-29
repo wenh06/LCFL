@@ -351,6 +351,7 @@ class LCFLServer(BaseServer):
                     if not self.config.local_warmup:
                         self._update()
 
+    @torch.no_grad()
     def _perform_clustering(self) -> None:
         """Perform clustering.
 
@@ -374,6 +375,8 @@ class LCFLServer(BaseServer):
         ) as pbar:
             for client_id in pbar:
                 client = self._clients[client_id]
+                client.model.eval()
+                client_data, client_label = client.get_all_data()
                 half_dist_vec = np.zeros(len(self._clients))
                 for another_client_id in range(self.config.num_clients):
                     # server broadcast model parameters of another_client_id
@@ -381,7 +384,7 @@ class LCFLServer(BaseServer):
                     if client_id == another_client_id:
                         continue
                     another_client = self._clients[another_client_id]
-                    client_data, client_label = client.get_all_data()
+                    another_client.model.eval()
                     half_dist_vec[another_client_id] = (
                         client.criterion(
                             client.model(client_data.to(client.model.device)),
