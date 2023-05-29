@@ -23,11 +23,11 @@ algorithm:
       step_size: 1
       gamma: 0.99
 dataset:
-  name: FedRotatedMNIST
+  name: FedRotatedCIFAR10
   datadir: null  # default dir
   num_clusters: ${{ algorithm.server.num_clusters }}
   num_clients: ${{ algorithm.server.num_clients }}
   transform: null  # null for default dynamic transform (augmentation)
 model:
-  name: cnn_femmist_tiny
+  name: cnn_cifar
 seed: ${{ matrix.seed }}

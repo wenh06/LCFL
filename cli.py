@@ -212,5 +212,6 @@ if __name__ == "__main__":
     # nohup python -u cli.py configs/lcfl-rot-mnist.yml > .logs/cli-mnist.log 2>&1 & echo $! > .logs/cli-mnist.pid
     # nohup python -u cli.py configs/lcfl-rot-cifar10.yml > .logs/cli-cifar10.log 2>&1 & echo $! > .logs/cli-cifar10.pid
     # nohup python -u cli.py configs/single-run-test.yml > .logs/cli-test.log 2>&1 & echo $! > .logs/cli-test.pid
+    # nohup python -u cli.py configs/single-run-test-1.yml > .logs/cli-test-1.log 2>&1 & echo $! > .logs/cli-test-1.pid
 
     main()

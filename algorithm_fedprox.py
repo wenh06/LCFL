@@ -319,7 +319,7 @@ class LCFLServer(BaseServer):
                     total=len(selected_clients),
                     desc=f"Warm Up Iter {self.n_iter+1}/{self.config.num_warmup_iters}",
                     unit="client",
-                    mininterval=1.0,
+                    mininterval=max(1, len(selected_clients) // 20),
                     disable=self.config.verbose < 1,
                 ) as pbar:
                     for client_id in selected_clients:
@@ -372,7 +372,7 @@ class LCFLServer(BaseServer):
             total=self.config.num_clients,
             desc="Compute distance vectors",
             unit="client",
-            mininterval=1.0,
+            mininterval=5.0,
         ) as pbar:
             for client_id in pbar:
                 client = self._clients[client_id]
@@ -415,7 +415,7 @@ class LCFLServer(BaseServer):
         self._cluster_centers = {
             i: {
                 "center_model": deepcopy(self.model),
-                "client_ids": np.where(cluster_ids == i)[0],
+                "client_ids": np.where(cluster_ids == i)[0].tolist(),
             }
             for i in np.unique(cluster_ids)
         }
@@ -448,7 +448,7 @@ class LCFLServer(BaseServer):
                         total=len(selected_clients),
                         desc=f"Iter {self.n_iter+1}/{total_iters} | Cluster {cluster_id}",
                         unit="client",
-                        mininterval=1.0,
+                        mininterval=max(1, len(selected_clients) // 20),
                         disable=self.config.verbose < 1,
                     ) as pbar:
                         for client_id in selected_clients:

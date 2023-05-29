@@ -1,18 +1,20 @@
+# Test single run, so set each item in strategy.matrix to have only one value.
+
 strategy:
   matrix:
     seed:
     - 0
-    - 1
-    - 2
-    - 3
-    - 4
 
 algorithm:
-  name: FedAvg
+  name: LCFL
   server:
+    num_clusters: 2
     num_clients: 200
     clients_sample_ratio: 0.1
     num_iters: 200
+    num_warmup_iters: 5
+    local_warmup: false
+    warmup_clients_sample_ratio: 0.6
   client:
     lr: 0.03
     num_epochs: 5
@@ -24,7 +26,7 @@ algorithm:
 dataset:
   name: FedRotatedCIFAR10
   datadir: null  # default dir
-  num_clusters: 2
+  num_clusters: ${{ algorithm.server.num_clusters }}
   num_clients: ${{ algorithm.server.num_clients }}
   transform: null  # null for default dynamic transform (augmentation)
 model:
