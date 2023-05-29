@@ -29,6 +29,8 @@ try:
         CIFAR10_LABEL_MAP,
         CIFAR10_MEAN,
         CIFAR10_STD,
+        MNIST_MEAN,
+        MNIST_STD,
     )
     from fl_sim.utils._download_data import http_get
     from fl_sim.models import nn as mnn
