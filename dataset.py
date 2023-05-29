@@ -34,6 +34,7 @@ try:
     from fl_sim.models import nn as mnn
     from fl_sim.models.utils import top_n_accuracy
     from fl_sim.data_processing import FedVisionDataset
+    from fl_sim.data_processing.fed_dataset import VisionDataset
 except ModuleNotFoundError:
     # not installed,
     # import from the submodule instead
@@ -47,6 +48,8 @@ except ModuleNotFoundError:
         CIFAR10_LABEL_MAP,
         CIFAR10_MEAN,
         CIFAR10_STD,
+        MNIST_MEAN,
+        MNIST_STD,
     )
     from fl_sim.utils._download_data import http_get
     from fl_sim.models import nn as mnn
@@ -136,10 +139,10 @@ class FedRotatedMNIST(FedVisionDataset):
         self.transform = transforms.Compose(
             [
                 ImageArrayToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,)),
+                transforms.Normalize(MNIST_MEAN, MNIST_STD),
             ]
         )
-        self.target_transform = transforms.Compose([CategoricalLabelToTensor()])
+        self.target_transform = CategoricalLabelToTensor()
 
         # load data
         self._train_data_dict = {}
@@ -492,12 +495,23 @@ class FedRotatedCIFAR10(FedVisionDataset):
         self.criterion = torch.nn.CrossEntropyLoss()
 
         # set transforms for creating dataset
-        self.transform = transforms.Compose(
-            [
-                ImageArrayToTensor(),
-                transforms.Normalize(mean=CIFAR10_MEAN, std=CIFAR10_STD),
-            ]
-        )
+        if self.transform is None:
+            # set dynamic transform for train set
+            self.transform = transforms.Compose(
+                [
+                    # `ToPILImage` is used since we further need
+                    # `ToTensor` to normalize the image which does not
+                    # accept `torch.Tensor` as input.
+                    transforms.ToPILImage(),
+                    transforms.AutoAugment(
+                        # accepts `torch.Tensor` or `PIL.Image` as input,
+                        # ** requiring** `uint8` input data type.
+                        policy=transforms.AutoAugmentPolicy.CIFAR10,
+                    ),
+                    transforms.ToTensor(),
+                    transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+                ]
+            )
         self.target_transform = transforms.Compose([CategoricalLabelToTensor()])
 
         # load data
@@ -631,12 +645,35 @@ class FedRotatedCIFAR10(FedVisionDataset):
             train_slice = self.indices["train"][client_idx]
             test_slice = self.indices["test"][client_idx]
 
-        train_ds = torchdata.TensorDataset(
-            self.transform(self._train_data_dict[self._IMGAE][train_slice].copy()),
-            self.target_transform(
-                self._train_data_dict[self._LABEL][train_slice].copy()
-            ),
+        # static transform
+        static_transform = transforms.Compose(
+            [
+                ImageArrayToTensor(),
+                transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+            ]
         )
+
+        if self.transform == "none":
+            # apply only static transform
+            train_ds = torchdata.TensorDataset(
+                static_transform(
+                    self._train_data_dict[self._IMGAE][train_slice].copy()
+                ),
+                self.target_transform(
+                    self._train_data_dict[self._LABEL][train_slice].copy()
+                ),
+            )
+        else:
+            # use non-trivial dynamic transform
+            train_ds = VisionDataset(
+                images=torch.from_numpy(
+                    self._train_data_dict[self._IMGAE][train_slice].copy()
+                ).to(torch.uint8),
+                targets=self.target_transform(
+                    self._train_data_dict[self._LABEL][train_slice].copy()
+                ),
+                transform=self.transform,
+            )
         train_dl = torchdata.DataLoader(
             dataset=train_ds,
             batch_size=train_bs or self.DEFAULT_BATCH_SIZE,
@@ -645,7 +682,7 @@ class FedRotatedCIFAR10(FedVisionDataset):
         )
 
         test_ds = torchdata.TensorDataset(
-            self.transform(self._test_data_dict[self._IMGAE][test_slice].copy()),
+            static_transform(self._test_data_dict[self._IMGAE][test_slice].copy()),
             self.target_transform(self._test_data_dict[self._LABEL][test_slice].copy()),
         )
         test_dl = torchdata.DataLoader(
@@ -747,7 +784,43 @@ class FedRotatedCIFAR10(FedVisionDataset):
 
 
 class FixedDegreeRotation(torch.nn.Module):
-    """Fixed Degree Rotation Transformation"""
+    """Fixed Degree Rotation Transformation.
+
+    Parameters
+    ----------
+    degree : int
+        The degree of rotation.
+        Counterclockwise rotation if positive,
+        clockwise rotation if negative.
+
+    Examples
+    --------
+    >>> from itertools import repeat
+    >>> img = torch.Tensor([list(repeat(i + 1, 4)) for i in range(4)]).to(torch.uint8).unsqueeze(0)
+    >>> img = torch.cat([img, img], dim=0)  # shape: (2, 4, 4)
+    >>> rotated_img = FixedDegreeRotation(90)(img)  # shape: (3, 4, 4)
+    >>> img
+    tensor([[[1, 1, 1, 1],
+             [2, 2, 2, 2],
+             [3, 3, 3, 3],
+             [4, 4, 4, 4]],
+
+            [[1, 1, 1, 1],
+            [2, 2, 2, 2],
+            [3, 3, 3, 3],
+            [4, 4, 4, 4]]], dtype=torch.uint8)
+    >>> rotated_img
+    tensor([[[1, 2, 3, 4],
+             [1, 2, 3, 4],
+             [1, 2, 3, 4],
+             [1, 2, 3, 4]],
+
+             [[1, 2, 3, 4],
+             [1, 2, 3, 4],
+             [1, 2, 3, 4],
+             [1, 2, 3, 4]]], dtype=torch.uint8)
+
+    """
 
     __name__ = "FixedDegreeRotation"
 
