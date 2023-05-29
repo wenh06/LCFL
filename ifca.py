@@ -8,7 +8,7 @@ Codebase URL: https://github.com/jichan3751/ifca
 """
 
 from copy import deepcopy
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Sequence
 
 import torch
 from torch_ecg.utils.misc import add_docstring, list_sum
@@ -226,6 +226,21 @@ class IFCAServer(BaseServer):
                     alpha=1 / cluster_sizes[cluster_id],
                 )
             cluster["client_ids"].append(m["client_id"])
+
+    def aggregate_client_metrics(self, ignore: Sequence[str] = ["cluster_id"]) -> None:
+        """Aggregate the metrics transmitted from the clients.
+
+        Parameters
+        ----------
+        ignore : Sequence[str], default ["cluster_id"]
+            The metrics to ignore.
+
+        Returns
+        -------
+        None
+
+        """
+        super().aggregate_client_metrics(ignore=ignore)
 
 
 @add_docstring(BaseClient.__doc__.replace(_base_algorithm, "IFCA"))

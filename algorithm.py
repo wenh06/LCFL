@@ -2,7 +2,7 @@
 """
 
 from copy import deepcopy
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Sequence
 
 import numpy as np
 import torch
@@ -470,6 +470,21 @@ class LCFLServer(BaseServer):
                         if (self.n_iter + 1) % self.config.eval_every == 0:
                             self.aggregate_client_metrics()
                         self._update()
+
+    def aggregate_client_metrics(self, ignore: Sequence[str] = ["cluster_id"]) -> None:
+        """Aggregate the metrics transmitted from the clients.
+
+        Parameters
+        ----------
+        ignore : Sequence[str], default ["cluster_id"]
+            The metrics to ignore.
+
+        Returns
+        -------
+        None
+
+        """
+        super().aggregate_client_metrics(ignore=ignore)
 
 
 @add_docstring(BaseClient.__doc__.replace(_base_algorithm, "LCFL"))
