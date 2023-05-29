@@ -20,6 +20,7 @@ algorithm:
     num_iters: 60
     num_warmup_iters: 5
     local_warmup: false
+    warmup_clients_sample_ratio: null  # null for `clients_sample_ratio`
   client:
     lr: 0.02
     num_epochs: 10

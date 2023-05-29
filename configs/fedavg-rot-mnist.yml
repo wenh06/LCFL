@@ -1,22 +1,22 @@
-# Test single run, so set each item in strategy.matrix to have only one value.
-
 strategy:
   matrix:
     num_clients:
     - 1200
+    - 2400
+    - 4800
     seed:
     - 0
+    - 1
+    - 2
+    - 3
+    - 4
 
 algorithm:
-  name: LCFL
+  name: FedAvg
   server:
-    num_clusters: 4
     num_clients: ${{ matrix.num_clients }}
     clients_sample_ratio: 1.0
     num_iters: 60
-    num_warmup_iters: 5
-    local_warmup: false
-    warmup_clients_sample_ratio: null  # null for `clients_sample_ratio`
   client:
     lr: 0.02
     num_epochs: 10
@@ -26,7 +26,7 @@ algorithm:
 dataset:
   name: FedRotatedMNIST
   datadir: null  # default dir
-  num_clusters: ${{ algorithm.server.num_clusters }}
+  num_clusters: 4
   num_clients: ${{ algorithm.server.num_clients }}
   transform: none  # none for static transform (only normalization, no augmentation)
 model:

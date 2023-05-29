@@ -24,6 +24,7 @@ from fl_sim.data_processing import (
     FedProxFEMNIST,
     FedProxMNIST,
 )
+from fl_sim.algorithms import fedopt, fedprox
 from torch_ecg.cfg import CFG
 import yaml
 
@@ -123,6 +124,16 @@ def single_run(config: CFG):
                 "server_config": IFCAServerConfig,
                 "client_config": IFCAClientConfig,
                 "server": IFCAServer,
+            },
+            "FedAvg": {
+                "server_config": fedopt.FedAvgServerConfig,
+                "client_config": fedopt.FedAvgClientConfig,
+                "server": fedopt.FedAvgServer,
+            },
+            "FedProx": {
+                "server_config": fedprox.FedProxServerConfig,
+                "client_config": fedprox.FedProxClientConfig,
+                "server": fedprox.FedProxServer,
             },
         }
     )
