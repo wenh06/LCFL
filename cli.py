@@ -84,7 +84,11 @@ def parse_config_file(config_file_path: Union[str, Path]) -> List[CFG]:
             # pattern = re.compile(f"\${{{{ matrix.{k} }}}}")
             # allow for arbitrary number (can be 0) of spaces around matrix.k
             pattern = re.compile(f"\\${{{{(?:\\s+)?matrix.{k}(?:\\s+)?}}}}")
-            new_file_content = re.sub(pattern, str(v), new_file_content)
+            new_file_content = re.sub(
+                pattern,
+                yaml.safe_dump(v).splitlines()[0],
+                new_file_content,
+            )
         new_config = CFG(yaml.safe_load(new_file_content))
         new_config.pop("strategy")
         # replace pattern of the form ${{ xx.xx... }} with corresponding value
@@ -100,7 +104,10 @@ def parse_config_file(config_file_path: Union[str, Path]) -> List[CFG]:
                 raise ValueError(f"Invalid key {repkey} in {config_file_path}")
             rep_pattern = re.compile(f"\\$\\{{{{(?:\\s+)?{repkey}(?:\\s+)?}}}}")
             new_file_content = re.sub(
-                rep_pattern, str(repval), new_file_content, count=1
+                rep_pattern,
+                yaml.safe_dump(repval).splitlines()[0],
+                new_file_content,
+                count=1,
             )
         new_config = CFG(yaml.safe_load(new_file_content))
         new_config.pop("strategy")
@@ -112,6 +119,7 @@ def parse_config_file(config_file_path: Union[str, Path]) -> List[CFG]:
 def single_run(config: CFG):
     # run a single experiment
     config = CFG(config)
+    config_bak = deepcopy(config)
 
     algorithm_pool = CFG(
         {
@@ -186,6 +194,8 @@ def single_run(config: CFG):
         client_config,
         lazy=False,
     )
+
+    s._logger_manager.log_message(f"Experiment config:\n{config_bak}")
 
     # s._setup_clients()
 
