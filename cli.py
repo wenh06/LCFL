@@ -86,7 +86,7 @@ def parse_config_file(config_file_path: Union[str, Path]) -> List[CFG]:
             pattern = re.compile(f"\\${{{{(?:\\s+)?matrix.{k}(?:\\s+)?}}}}")
             new_file_content = re.sub(
                 pattern,
-                yaml.safe_dump(v).splitlines()[0],
+                re.sub("(\\n[\\.]{3})?\\n$", "", yaml.safe_dump(v)),
                 new_file_content,
             )
         new_config = CFG(yaml.safe_load(new_file_content))
@@ -105,7 +105,7 @@ def parse_config_file(config_file_path: Union[str, Path]) -> List[CFG]:
             rep_pattern = re.compile(f"\\$\\{{{{(?:\\s+)?{repkey}(?:\\s+)?}}}}")
             new_file_content = re.sub(
                 rep_pattern,
-                yaml.safe_dump(repval).splitlines()[0],
+                re.sub("(\\n[\\.]{3})?\\n$", "", yaml.safe_dump(repval)),
                 new_file_content,
                 count=1,
             )
@@ -173,11 +173,17 @@ def single_run(config: CFG):
     ds = ds_cls(**(config.dataset))
     model = ds.candidate_models[config.model.pop("name")]
 
+    # fill default values
     if (
         "batch_size" not in config.algorithm.client
         or config.algorithm.client.batch_size is None
     ):
         config.algorithm.client.batch_size = ds.DEFAULT_BATCH_SIZE
+    if (
+        "num_clients" not in config.algorithm.server
+        or config.algorithm.server.num_clients is None
+    ):
+        config.algorithm.server.num_clients = ds.DEFAULT_TRAIN_CLIENTS_NUM
 
     # server and client configs
     server_config_cls = algorithm_pool[config.algorithm.name]["server_config"]
