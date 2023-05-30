@@ -3,8 +3,9 @@ Miscellaneous functions,
 for collecting experiment results, visualizing them, etc.
 """
 
+import re
 from pathlib import Path
-from typing import Union, Sequence, Optional, Tuple
+from typing import Union, Sequence, Optional, Tuple, List
 
 import matplotlib.pyplot as plt
 
@@ -18,6 +19,47 @@ except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
     from fl_sim.nodes import Node
+
+
+__all__ = [
+    "find_log_files",
+    "get_config_from_log",
+    "plot_curve",
+]
+
+
+def find_log_files(
+    directory: Union[str, Path], filters: str = "", show: bool = False
+) -> Union[List[Path], None]:
+    """Find log files in the given directory, recursively.
+
+    Parameters
+    ----------
+    directory : Union[str, pathlib.Path]
+        The directory to search for log files.
+    filters : str, default ""
+        Filters for the log files.
+        Only files fitting the pattern of `filters` will be returned.
+    show : bool, default False
+        Whether to print the found log files.
+        If True, the found log files will be printed and **NOT** returned.
+
+    Returns
+    -------
+    List[pathlib.Path]
+        The list of log files.
+
+    """
+    log_files = [
+        item
+        for item in Path(directory).rglob("*.json")
+        if item.is_file() and re.search(filters, item.name)
+    ]
+    if show:
+        for idx, fn in enumerate(log_files):
+            print(idx, "---", fn.stem)
+    else:
+        return log_files
 
 
 def get_config_from_log(file) -> dict:
@@ -58,8 +100,8 @@ def plot_curve(
         curves.append(
             Node.aggregate_results_from_json_log(
                 file,
-                part="val",
-                metric="acc",
+                part=part,
+                metric=metric,
             )
         )
         stems.append(Path(file).stem)
