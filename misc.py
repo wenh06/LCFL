@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 try:
     from fl_sim.nodes import Node
+    from fl_sim.utils.const import LOG_DIR
 except ModuleNotFoundError:
     # not installed,
     # import from the submodule instead
@@ -19,6 +20,7 @@ except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
     from fl_sim.nodes import Node
+    from fl_sim.utils.const import LOG_DIR
 
 
 __all__ = [
@@ -29,13 +31,13 @@ __all__ = [
 
 
 def find_log_files(
-    directory: Union[str, Path], filters: str = "", show: bool = False
+    directory: Union[str, Path] = LOG_DIR, filters: str = "", show: bool = False
 ) -> Union[List[Path], None]:
     """Find log files in the given directory, recursively.
 
     Parameters
     ----------
-    directory : Union[str, pathlib.Path]
+    directory : Union[str, pathlib.Path], default fl_sim.utils.const.LOG_DIR
         The directory to search for log files.
     filters : str, default ""
         Filters for the log files.
