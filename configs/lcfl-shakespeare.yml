@@ -4,6 +4,10 @@ strategy:
   matrix:
     seed:
     - 0
+    - 1
+    - 2
+    - 3
+    - 4
 
 algorithm:
   name: LCFL
@@ -11,7 +15,7 @@ algorithm:
     num_clusters: 4
     num_clients: null
     clients_sample_ratio: 0.2
-    num_iters: 200
+    num_iters: 300
     num_warmup_iters: 5
     local_warmup: false
     warmup_clients_sample_ratio: 0.6
