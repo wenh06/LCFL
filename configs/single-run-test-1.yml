@@ -10,19 +10,19 @@ algorithm:
   server:
     num_clusters: 4
     num_clients: null
-    clients_sample_ratio: 0.2
+    clients_sample_ratio: 1
     num_iters: 200
-    num_warmup_iters: 5
+    num_warmup_iters: 10
     local_warmup: false
-    warmup_clients_sample_ratio: 0.6
+    warmup_clients_sample_ratio: 1
   client:
-    lr: 0.03
-    num_epochs: 5
+    lr: 0.06
+    num_epochs: 20
     batch_size: null  # null for default batch size
     scheduler:
       name: step  # StepLR
       step_size: 1
-      gamma: 0.99
+      gamma: 0.995
 dataset:
   name: FedShakespeare
   datadir: null  # default dir
