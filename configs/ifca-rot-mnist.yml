@@ -1,7 +1,7 @@
 strategy:
   matrix:
     num_clients:
-    - 1200
+    # - 1200  # executed
     - 2400
     - 4800
     seed:
