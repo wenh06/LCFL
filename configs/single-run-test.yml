@@ -2,33 +2,27 @@
 
 strategy:
   matrix:
-    num_clients:
-    - 1200
     seed:
     - 0
 
 algorithm:
-  name: LCFL
+  name: FedAvg
   server:
     num_clusters: 4
-    num_clients: ${{ matrix.num_clients }}
-    clients_sample_ratio: 1.0
-    num_iters: 60
-    num_warmup_iters: 5
-    local_warmup: false
-    warmup_clients_sample_ratio: null  # null for `clients_sample_ratio`
+    num_clients: null
+    clients_sample_ratio: 0.4
+    num_iters: 150
   client:
-    lr: 0.02
+    lr: 0.1
     num_epochs: 10
     batch_size: null  # null for default batch size
     scheduler:
-      name: none
+      name: step  # StepLR
+      step_size: 1
+      gamma: 0.99
 dataset:
-  name: FedRotatedMNIST
+  name: FedShakespeare
   datadir: null  # default dir
-  num_clusters: ${{ algorithm.server.num_clusters }}
-  num_clients: ${{ algorithm.server.num_clients }}
-  transform: none  # none for static transform (only normalization, no augmentation)
 model:
-  name: cnn_femmist_tiny
+  name: rnn
 seed: ${{ matrix.seed }}
