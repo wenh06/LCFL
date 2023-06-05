@@ -298,9 +298,10 @@ class IFCAClient(BaseClient):
         # select the cluster with the minimum loss
         self.cluster_id = min(losses, key=losses.get)
 
-        # set the cluster center as the center of the proximal term
+        # set the cluster center as the local model parameters
         self._cached_parameters = [
             p.detach().clone().to(self.device)
             for p in self._received_messages["cluster_centers"][self.cluster_id]
         ]
+        self.set_parameters(self._cached_parameters)
         self.solve_inner()  # alias of self.train()
