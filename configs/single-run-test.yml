@@ -6,23 +6,24 @@ strategy:
     - 0
 
 algorithm:
-  name: FedAvg
+  name: FedProx
   server:
-    num_clusters: 4
+    # num_clusters: ${{ matrix.num_clusters }}
     num_clients: null
-    clients_sample_ratio: 0.4
-    num_iters: 150
+    clients_sample_ratio: 0.5
+    num_iters: 100
+    # num_warmup_iters: 5
+    # local_warmup: false
+    # warmup_clients_sample_ratio: 0.6
   client:
-    lr: 0.1
+    lr: 0.03
     num_epochs: 10
     batch_size: null  # null for default batch size
     scheduler:
-      name: step  # StepLR
-      step_size: 1
-      gamma: 0.99
+      name: none
 dataset:
-  name: FedShakespeare
-  datadir: null  # default dir
+  name: FedProxFEMNIST
+  datadir: /data2/wenhao/jupyter-data/FL/fedprox-femnist/
 model:
-  name: rnn
+  name: cnn_femmist_tiny
 seed: ${{ matrix.seed }}
