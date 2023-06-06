@@ -120,7 +120,7 @@ class LCFLServerConfig(BaseServerConfig):
             vr=False,
             **kwargs,
         )
-        self.algorithm = "LCFL"
+        self.algorithm = "LCFL_Prox"
         self.num_clusters = num_clusters
         self.cluster_method = cluster_method
         self.num_warmup_iters = num_warmup_iters
@@ -171,7 +171,7 @@ class LCFLClientConfig(BaseClientConfig):
             vr=False,
             **kwargs,
         )
-        self.algorithm = "LCFL"
+        self.algorithm = "LCFL_Prox"
 
 
 @add_docstring(BaseServer.__doc__.replace(_base_algorithm, "LCFL"))
@@ -335,7 +335,6 @@ class LCFLServer(BaseServer):
                             for part in self.dataset.data_parts:
                                 metrics = client.evaluate(part)
                                 metrics["cluster_id"] = -1
-                                # print(f"metrics: {metrics}")
                                 self._logger_manager.log_metrics(
                                     client_id,
                                     metrics,
@@ -463,7 +462,6 @@ class LCFLServer(BaseServer):
                                 for part in self.dataset.data_parts:
                                     metrics = client.evaluate(part)
                                     metrics["cluster_id"] = cluster_id
-                                    # print(f"metrics: {metrics}")
                                     self._logger_manager.log_metrics(
                                         client_id,
                                         metrics,
