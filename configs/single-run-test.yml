@@ -22,7 +22,7 @@ algorithm:
     scheduler:
       name: none
 dataset:
-  name: FedMNIST
+  name: FedProxMNIST
   datadir: null
 model:
   name: cnn_femmist_tiny
