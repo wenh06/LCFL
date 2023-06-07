@@ -6,11 +6,11 @@ strategy:
     - 0
 
 algorithm:
-  name: FedProx
+  name: FedAvg
   server:
     # num_clusters: ${{ matrix.num_clusters }}
     num_clients: null
-    clients_sample_ratio: 0.5
+    clients_sample_ratio: 0.3
     num_iters: 100
     # num_warmup_iters: 5
     # local_warmup: false
@@ -22,8 +22,8 @@ algorithm:
     scheduler:
       name: none
 dataset:
-  name: FedProxFEMNIST
-  datadir: /data2/wenhao/jupyter-data/FL/fedprox-femnist/
+  name: FedMNIST
+  datadir: null
 model:
   name: cnn_femmist_tiny
 seed: ${{ matrix.seed }}
