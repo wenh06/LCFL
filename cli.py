@@ -17,6 +17,7 @@ from fl_sim.data_processing import (
     FedEMNIST,
     FedMNIST,
     FedShakespeare,
+    FedProxSent140,
     FedProxFEMNIST,
     FedProxMNIST,
 )
@@ -103,6 +104,7 @@ def single_run(config: CFG):
             FedEMNIST,
             FedMNIST,
             FedShakespeare,
+            FedProxSent140,
             FedProxFEMNIST,
             FedProxMNIST,
             FedRotatedMNIST,
