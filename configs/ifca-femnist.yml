@@ -1,0 +1,34 @@
+strategy:
+  matrix:
+    num_clusters:
+    - 10
+    - 4
+    seed:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+
+algorithm:
+  name: IFCA
+  server:
+    num_clusters: ${{ matrix.num_clusters }}
+    num_clients: null
+    clients_sample_ratio: 0.2
+    num_iters: 150
+  client:
+    lr: 0.03
+    num_epochs: 10
+    batch_size: null  # null for default batch size
+    scheduler:
+      name: step  # StepLR
+      step_size: 1
+      gamma: 0.99
+dataset:
+  name: FedEMNIST
+  datadir: null
+  transform: none  # none for static transform (only normalization, no augmentation)
+model:
+  name: cnn_femmist_tiny
+seed: ${{ matrix.seed }}
