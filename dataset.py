@@ -35,7 +35,7 @@ try:
     from fl_sim.utils._download_data import http_get
     from fl_sim.models import nn as mnn
     from fl_sim.models.utils import top_n_accuracy
-    from fl_sim.data_processing import FedVisionDataset
+    from fl_sim.data_processing import FedVisionDataset, register_fed_dataset
     from fl_sim.data_processing.fed_dataset import VisionDataset
 except ModuleNotFoundError:
     # not installed,
@@ -56,7 +56,8 @@ except ModuleNotFoundError:
     from fl_sim.utils._download_data import http_get
     from fl_sim.models import nn as mnn
     from fl_sim.models.utils import top_n_accuracy
-    from fl_sim.data_processing import FedVisionDataset
+    from fl_sim.data_processing import FedVisionDataset, register_fed_dataset
+    from fl_sim.data_processing.fed_dataset import VisionDataset
 
 
 __all__ = [
@@ -65,6 +66,7 @@ __all__ = [
 ]
 
 
+@register_fed_dataset()
 class FedRotatedMNIST(FedVisionDataset):
     """MNIST augmented with rotations.
 
@@ -429,6 +431,7 @@ class FedRotatedMNIST(FedVisionDataset):
         plt.show()
 
 
+@register_fed_dataset()
 class FedRotatedCIFAR10(FedVisionDataset):
     """CIFAR10 dataset with rotation augmentation.
 

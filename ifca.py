@@ -5,6 +5,9 @@ Based on the paper, serving as the baseline for LCFL.
 
 Codebase URL: https://github.com/jichan3751/ifca
 
+NOTE: this algorithm has been moved to `fl_sim.algorithms.ifca`.
+This file no longer updates.
+
 """
 
 from copy import deepcopy
@@ -21,6 +24,7 @@ try:
         FedAvgClientConfig as BaseClientConfig,
         FedAvgServerConfig as BaseServerConfig,
     )
+    from fl_sim.algorithms import register_algorithm
 
     _base_algorithm = "FedAvg"
 except ModuleNotFoundError:
@@ -38,10 +42,12 @@ except ModuleNotFoundError:
         FedAvgClientConfig as BaseClientConfig,
         FedAvgServerConfig as BaseServerConfig,
     )
+    from fl_sim.algorithms import register_algorithm
 
     _base_algorithm = "FedAvg"
 
 
+@register_algorithm("IFCA")
 class IFCAServerConfig(BaseServerConfig):
     """Server config for the IFCA algorithm.
 
@@ -58,19 +64,20 @@ class IFCAServerConfig(BaseServerConfig):
     **kwargs : dict, optional
         Additional keyword arguments:
 
+        - ``log_dir`` : str or Path, optional
+            The log directory.
+            If not specified, will use the default log directory.
+            If not absolute, will be relative to the default log directory.
         - ``txt_logger`` : bool, default True
             Whether to use txt logger.
-        - ``csv_logger`` : bool, default False
-            Whether to use csv logger.
         - ``json_logger`` : bool, default True
             Whether to use json logger.
         - ``eval_every`` : int, default 1
             The number of iterations to evaluate the model.
-        - ``visiable_gpus`` : Sequence[int], optional
-            Visable GPU IDs for allocating devices for clients.
-            Defaults to use all GPUs if available.
         - ``seed`` : int, default 0
             The random seed.
+        - ``tag`` : str, optional
+            The tag of the experiment.
         - ``verbose`` : int, default 1
             The verbosity level.
         - ``gpu_proportion`` : float, default 0.2
@@ -100,6 +107,7 @@ class IFCAServerConfig(BaseServerConfig):
         self.num_clusters = num_clusters
 
 
+@register_algorithm("IFCA")
 class IFCAClientConfig(BaseClientConfig):
     """Client config for the IFCA algorithm.
 
@@ -143,6 +151,7 @@ class IFCAClientConfig(BaseClientConfig):
         self.algorithm = "IFCA"
 
 
+@register_algorithm("IFCA")
 @add_docstring(BaseServer.__doc__.replace(_base_algorithm, "IFCA"))
 class IFCAServer(BaseServer):
 
@@ -246,6 +255,7 @@ class IFCAServer(BaseServer):
         super().aggregate_client_metrics(ignore=ignore)
 
 
+@register_algorithm("IFCA")
 @add_docstring(BaseClient.__doc__.replace(_base_algorithm, "IFCA"))
 class IFCAClient(BaseClient):
 

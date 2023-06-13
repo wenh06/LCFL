@@ -19,6 +19,7 @@ try:
         FedAvgClientConfig as BaseClientConfig,
         FedAvgServerConfig as BaseServerConfig,
     )
+    from fl_sim.algorithms import register_algorithm
 
     _base_algorithm = "FedAvg"
 except ModuleNotFoundError:
@@ -36,6 +37,7 @@ except ModuleNotFoundError:
         FedAvgClientConfig as BaseClientConfig,
         FedAvgServerConfig as BaseServerConfig,
     )
+    from fl_sim.algorithms import register_algorithm
 
     _base_algorithm = "FedAvg"
 
@@ -48,6 +50,7 @@ __all__ = [
 ]
 
 
+@register_algorithm("LCFL")
 class LCFLServerConfig(BaseServerConfig):
     """Server config for the LCFL algorithm.
 
@@ -74,19 +77,20 @@ class LCFLServerConfig(BaseServerConfig):
     **kwargs : dict, optional
         Additional keyword arguments:
 
+        - ``log_dir`` : str or Path, optional
+            The log directory.
+            If not specified, will use the default log directory.
+            If not absolute, will be relative to the default log directory.
         - ``txt_logger`` : bool, default True
             Whether to use txt logger.
-        - ``csv_logger`` : bool, default False
-            Whether to use csv logger.
         - ``json_logger`` : bool, default True
             Whether to use json logger.
         - ``eval_every`` : int, default 1
             The number of iterations to evaluate the model.
-        - ``visiable_gpus`` : Sequence[int], optional
-            Visable GPU IDs for allocating devices for clients.
-            Defaults to use all GPUs if available.
         - ``seed`` : int, default 0
             The random seed.
+        - ``tag`` : str, optional
+            The tag of the experiment.
         - ``verbose`` : int, default 1
             The verbosity level.
         - ``gpu_proportion`` : float, default 0.2
@@ -126,6 +130,7 @@ class LCFLServerConfig(BaseServerConfig):
         )
 
 
+@register_algorithm("LCFL")
 class LCFLClientConfig(BaseClientConfig):
     """Client config for the LCFL algorithm.
 
@@ -169,6 +174,7 @@ class LCFLClientConfig(BaseClientConfig):
         self.algorithm = "LCFL"
 
 
+@register_algorithm("LCFL")
 @add_docstring(BaseServer.__doc__.replace(_base_algorithm, "LCFL"))
 class LCFLServer(BaseServer):
 
@@ -493,6 +499,7 @@ class LCFLServer(BaseServer):
         super().aggregate_client_metrics(ignore=ignore)
 
 
+@register_algorithm("LCFL")
 @add_docstring(BaseClient.__doc__.replace(_base_algorithm, "LCFL"))
 class LCFLClient(BaseClient):
 
