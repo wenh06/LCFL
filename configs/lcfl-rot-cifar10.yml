@@ -31,7 +31,7 @@ algorithm:
 dataset:
   name: FedRotatedCIFAR10
   datadir: null  # default dir
-  num_clusters: ${{ algorithm.server.num_clusters }}
+  num_rotations: ${{ algorithm.server.num_clusters }}
   num_clients: ${{ algorithm.server.num_clients }}
   transform: ${{ matrix.dataset_transform }}
 model:

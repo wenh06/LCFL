@@ -30,7 +30,7 @@ algorithm:
 dataset:
   name: FedRotatedMNIST
   datadir: null  # default dir
-  num_clusters: ${{ algorithm.server.num_clusters }}
+  num_rotations: ${{ algorithm.server.num_clusters }}
   num_clients: ${{ algorithm.server.num_clients }}
   transform: none  # none for static transform (only normalization, no augmentation)
 model:
