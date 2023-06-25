@@ -12,7 +12,7 @@ strategy:
     - 4
 
 algorithm:
-  name: LCFL
+  name: algorithm.LCFL
   server:
     num_clusters: 4
     num_clients: ${{ matrix.num_clients }}
@@ -21,6 +21,8 @@ algorithm:
     num_warmup_iters: 5
     local_warmup: false
     warmup_clients_sample_ratio: null  # null for `clients_sample_ratio`
+    log_dir: LCFL-experiments
+    tag: num_clusters_${{ matrix.num_clusters }}-seed_${{ matrix.seed }}
   client:
     lr: 0.02
     num_epochs: 10

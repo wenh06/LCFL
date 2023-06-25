@@ -19,6 +19,8 @@ algorithm:
     num_clients: null
     clients_sample_ratio: 0.4
     num_iters: 150
+    log_dir: LCFL-experiments
+    tag: num_clusters_${{ matrix.num_clusters }}-seed_${{ matrix.seed }}
   client:
     lr: 0.1
     num_epochs: 10

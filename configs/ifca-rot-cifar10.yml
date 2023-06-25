@@ -17,6 +17,8 @@ algorithm:
     num_clients: 200
     clients_sample_ratio: 0.1
     num_iters: 200
+    log_dir: LCFL-experiments
+    tag: transform_${{ matrix.dataset_transform }}-seed_${{ matrix.seed }}
   client:
     lr: 0.03
     num_epochs: 5
