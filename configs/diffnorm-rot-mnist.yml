@@ -15,7 +15,7 @@ strategy:
     - 2
 
 algorithm:
-  name: algorithm.DiffNorm
+  name: algorithm_diff_norm.DiffNorm
   server:
     num_clusters: 4
     num_clients: ${{ matrix.num_clients }}

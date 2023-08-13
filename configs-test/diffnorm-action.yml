@@ -3,23 +3,30 @@
 strategy:
   matrix:
     num_clusters:
-    - 10
+    # - 10
     - 5
     seed:
     - 0
-    - 1
+    # - 1
+    # - 2
+    # - 3
+    # - 4
+    norm_ord:
+    # - 1
     - 2
-    - 3
-    - 4
 
 algorithm:
-  name: IFCA
+  name: algorithm_diff_norm.DiffNorm
   server:
     num_clusters: ${{ matrix.num_clusters }}
     num_clients: null
     clients_sample_ratio: 0.3
-    num_iters: 100
-    log_dir: LCFL-experiments
+    norm_ord: ${{ matrix.norm_ord }}
+    num_iters: 2
+    num_warmup_iters: 2
+    local_warmup: false
+    warmup_clients_sample_ratio: 0.6
+    log_dir: LCFL-test
     tag: num_clusters_${{ matrix.num_clusters }}-seed_${{ matrix.seed }}
   client:
     lr: 0.03
@@ -29,7 +36,7 @@ algorithm:
       name: none
 dataset:
   name: FedProxFEMNIST
-  datadir: null  # default dir
+  datadir: null
 model:
   name: cnn_femmist_tiny
 seed: ${{ matrix.seed }}

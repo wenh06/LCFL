@@ -27,7 +27,7 @@ algorithm:
       name: none
 dataset:
   name: FedEMNIST
-  datadir: null
+  datadir: null  # default dir
 model:
   name: cnn_femmist_tiny
 seed: ${{ matrix.seed }}

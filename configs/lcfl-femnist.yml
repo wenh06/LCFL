@@ -32,7 +32,7 @@ algorithm:
       gamma: 0.99
 dataset:
   name: FedEMNIST
-  datadir: null
+  datadir: null  # default dir
   transform: none  # none for static transform (only normalization, no augmentation)
 model:
   name: cnn_femmist_tiny

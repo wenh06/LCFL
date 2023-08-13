@@ -32,7 +32,7 @@ algorithm:
       name: none
 dataset:
   name: FedProxFEMNIST
-  datadir: /data2/wenhao/jupyter-data/FL/fedprox-femnist/
+  datadir: null  # default dir
 model:
   name: cnn_femmist_tiny
 seed: ${{ matrix.seed }}

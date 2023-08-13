@@ -16,7 +16,7 @@ strategy:
     - 2
 
 algorithm:
-  name: algorithm.DiffNorm
+  name: algorithm_diff_norm.DiffNorm
   server:
     num_clusters: ${{ matrix.num_clusters }}
     num_clients: null
@@ -36,7 +36,7 @@ algorithm:
       name: none
 dataset:
   name: FedProxFEMNIST
-  datadir: /data2/wenhao/jupyter-data/FL/fedprox-femnist/
+  datadir: null  # default dir
 model:
   name: cnn_femmist_tiny
 seed: ${{ matrix.seed }}
