@@ -2,7 +2,7 @@
 """
 
 from copy import deepcopy
-from typing import List, Optional, Dict, Any, Sequence
+from typing import List, Optional, Union, Dict, Any, Sequence
 
 import numpy as np
 import torch
@@ -383,9 +383,7 @@ class DiffNormServer(BaseServer):
             for client_id in pbar:
                 client = self._clients[client_id]
                 client.model.eval()
-                for another_client_id in range(i + 1, self.config.num_clients):
-                    if client_id == another_client_id:
-                        continue
+                for another_client_id in range(client_id + 1, self.config.num_clients):
                     another_client = self._clients[another_client_id]
                     another_client.model.eval()
                     dist = client.model.diff(another_client.model, self.config.norm_ord)
