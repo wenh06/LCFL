@@ -50,7 +50,7 @@ __all__ = [
 ]
 
 
-@register_algorithm("LCFL")
+@register_algorithm()
 class LCFLServerConfig(BaseServerConfig):
     """Server config for the LCFL algorithm.
 
@@ -130,7 +130,7 @@ class LCFLServerConfig(BaseServerConfig):
         )
 
 
-@register_algorithm("LCFL")
+@register_algorithm()
 class LCFLClientConfig(BaseClientConfig):
     """Client config for the LCFL algorithm.
 
@@ -174,7 +174,7 @@ class LCFLClientConfig(BaseClientConfig):
         self.algorithm = "LCFL"
 
 
-@register_algorithm("LCFL")
+@register_algorithm()
 @add_docstring(BaseServer.__doc__.replace(_base_algorithm, "LCFL"))
 class LCFLServer(BaseServer):
 
@@ -499,7 +499,7 @@ class LCFLServer(BaseServer):
         super().aggregate_client_metrics(ignore=ignore)
 
 
-@register_algorithm("LCFL")
+@register_algorithm()
 @add_docstring(BaseClient.__doc__.replace(_base_algorithm, "LCFL"))
 class LCFLClient(BaseClient):
 
