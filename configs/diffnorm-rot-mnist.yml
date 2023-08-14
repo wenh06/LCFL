@@ -3,7 +3,7 @@ strategy:
     num_clients:
     - 1200
     - 2400
-    - 4800
+    # - 4800
     seed:
     - 0
     - 1

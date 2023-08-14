@@ -12,11 +12,15 @@ strategy:
     - 4
 
 algorithm:
-  name: FedAvg
+  name: algorithm_grad_cos.GradCos
   server:
+    num_clusters: 4
     num_clients: ${{ matrix.num_clients }}
     clients_sample_ratio: 1.0
     num_iters: 60
+    num_warmup_iters: 5
+    local_warmup: false
+    warmup_clients_sample_ratio: null  # null for `clients_sample_ratio`
     log_dir: LCFL-experiments
     tag: num_clusters_${{ matrix.num_clusters }}-seed_${{ matrix.seed }}
   client:
@@ -28,7 +32,7 @@ algorithm:
 dataset:
   name: FedRotatedMNIST
   datadir: null  # default dir
-  num_rotations: 4
+  num_rotations: ${{ algorithm.server.num_clusters }}
   num_clients: ${{ algorithm.server.num_clients }}
   transform: none  # none for static transform (only normalization, no augmentation)
 model:
