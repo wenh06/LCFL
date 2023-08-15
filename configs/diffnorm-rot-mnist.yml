@@ -26,7 +26,7 @@ algorithm:
     local_warmup: false
     warmup_clients_sample_ratio: null  # null for `clients_sample_ratio`
     log_dir: LCFL-experiments
-    tag: num_clusters_${{ matrix.num_clusters }}-seed_${{ matrix.seed }}
+    tag: num_clients_${{ matrix.num_clients }}-seed_${{ matrix.seed }}
   client:
     lr: 0.02
     num_epochs: 10
