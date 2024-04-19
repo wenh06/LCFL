@@ -3,24 +3,22 @@
 
 import warnings
 from copy import deepcopy
-from typing import List, Optional, Dict, Any, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
 import torch
-from torch_ecg.utils.misc import add_docstring
 from sklearn.cluster import DBSCAN
 from sklearn_extra.cluster import KMedoids
+from torch_ecg.utils.misc import add_docstring
 from tqdm.auto import tqdm
 
 try:
-    from fl_sim.nodes import ClientMessage
-    from fl_sim.algorithms.fedprox import (
-        FedProxClient as BaseClient,
-        FedProxServer as BaseServer,
-        FedProxClientConfig as BaseClientConfig,
-        FedProxServerConfig as BaseServerConfig,
-    )
     from fl_sim.algorithms import register_algorithm
+    from fl_sim.algorithms.fedprox import FedProxClient as BaseClient
+    from fl_sim.algorithms.fedprox import FedProxClientConfig as BaseClientConfig
+    from fl_sim.algorithms.fedprox import FedProxServer as BaseServer
+    from fl_sim.algorithms.fedprox import FedProxServerConfig as BaseServerConfig
+    from fl_sim.nodes import ClientMessage
 
     _base_algorithm = "FedProx"
 except ModuleNotFoundError:
@@ -31,14 +29,12 @@ except ModuleNotFoundError:
 
     sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
-    from fl_sim.nodes import ClientMessage
-    from fl_sim.algorithms.fedprox import (
-        FedProxClient as BaseClient,
-        FedProxServer as BaseServer,
-        FedProxClientConfig as BaseClientConfig,
-        FedProxServerConfig as BaseServerConfig,
-    )
     from fl_sim.algorithms import register_algorithm
+    from fl_sim.algorithms.fedprox import FedProxClient as BaseClient
+    from fl_sim.algorithms.fedprox import FedProxClientConfig as BaseClientConfig
+    from fl_sim.algorithms.fedprox import FedProxServer as BaseServer
+    from fl_sim.algorithms.fedprox import FedProxServerConfig as BaseServerConfig
+    from fl_sim.nodes import ClientMessage
 
     _base_algorithm = "FedProx"
 
@@ -116,9 +112,7 @@ class LCFLServerConfig(BaseServerConfig):
         **kwargs: Any,
     ) -> None:
         if kwargs.pop("vr", None) is not None:
-            warnings.warn(
-                "`vr` is not used in LCFL, and always set to False", RuntimeWarning
-            )
+            warnings.warn("`vr` is not used in LCFL, and always set to False", RuntimeWarning)
         super().__init__(
             num_iters,
             num_clients,
@@ -131,9 +125,7 @@ class LCFLServerConfig(BaseServerConfig):
         self.cluster_method = cluster_method
         self.num_warmup_iters = num_warmup_iters
         self.local_warmup = local_warmup
-        self.warmup_clients_sample_ratio = (
-            warmup_clients_sample_ratio or clients_sample_ratio
-        )
+        self.warmup_clients_sample_ratio = warmup_clients_sample_ratio or clients_sample_ratio
 
 
 @register_algorithm("LCFL_Prox")
@@ -195,15 +187,12 @@ class LCFLServer(BaseServer):
         super()._post_init()
         assert self.config.num_clusters > 0
         if self.config.cluster_method.lower() == "kmedoids":
-            self._cluster_method = KMedoids(
-                n_clusters=self.config.num_clusters, metric="precomputed"
-            )
+            self._cluster_method = KMedoids(n_clusters=self.config.num_clusters, metric="precomputed")
         elif self.config.cluster_method.lower() == "dbscan":
             self._cluster_method = DBSCAN(metric="precomputed")
         else:
             raise ValueError(
-                "Currenly only support 'dbscan' and 'kmedoids' as cluster method, "
-                f"got {self.config.cluster_method}"
+                "Currenly only support 'dbscan' and 'kmedoids' as cluster method, " f"got {self.config.cluster_method}"
             )
         # self._cluster_centers = {
         #     i: {"center_model": deepcopy(self.model), "client_ids": []}
@@ -239,10 +228,7 @@ class LCFLServer(BaseServer):
             # send cluster centers to client
             target._received_messages = {
                 "parameters": [
-                    p.detach().clone()
-                    for p in self._cluster_centers[target._cluster_id][
-                        "center_model"
-                    ].parameters()
+                    p.detach().clone() for p in self._cluster_centers[target._cluster_id]["center_model"].parameters()
                 ]
             }
 
@@ -259,9 +245,7 @@ class LCFLServer(BaseServer):
             # federated training on each cluster
             for cluster_id in self._cluster_centers:
                 cluster_center = self._cluster_centers[cluster_id]
-                cluster_size = int(
-                    len(cluster_center["client_ids"]) * self.config.clients_sample_ratio
-                )
+                cluster_size = int(len(cluster_center["client_ids"]) * self.config.clients_sample_ratio)
                 # average the cluster center model using received parameters
                 for idx, p in enumerate(cluster_center["center_model"].parameters()):
                     p.zero_()
@@ -322,9 +306,7 @@ class LCFLServer(BaseServer):
         ) as outer_pbar:
             for self.n_iter in outer_pbar:
                 # selected_clients = list(range(self.config.num_clients))
-                selected_clients = self._sample_clients(
-                    clients_sample_ratio=self.config.warmup_clients_sample_ratio
-                )
+                selected_clients = self._sample_clients(clients_sample_ratio=self.config.warmup_clients_sample_ratio)
                 with tqdm(
                     total=len(selected_clients),
                     desc=f"Warm Up Iter {self.n_iter+1}/{self.config.num_warmup_iters}",
@@ -336,9 +318,7 @@ class LCFLServer(BaseServer):
                         client = self._clients[client_id]
                         if not self.config.local_warmup:
                             self._communicate(client)
-                        if (self.n_iter > 0) and (
-                            (self.n_iter + 1) % self.config.eval_every == 0
-                        ):
+                        if (self.n_iter > 0) and ((self.n_iter + 1) % self.config.eval_every == 0):
                             for part in self.dataset.data_parts:
                                 metrics = client.evaluate(part)
                                 metrics["cluster_id"] = -1
@@ -372,10 +352,7 @@ class LCFLServer(BaseServer):
         """
         self._logger_manager.log_message("Perform clustering...")
 
-        dist = {
-            client_id: np.zeros((self.config.num_clients,))
-            for client_id in range(self.config.num_clients)
-        }
+        dist = {client_id: np.zeros((self.config.num_clients,)) for client_id in range(self.config.num_clients)}
         with tqdm(
             range(self.config.num_clients),
             total=self.config.num_clients,
@@ -401,9 +378,7 @@ class LCFLServer(BaseServer):
                             client_label.to(client.model.device),
                         ).cpu()
                         - another_client.criterion(
-                            another_client.model(
-                                client_data.to(another_client.model.device)
-                            ),
+                            another_client.model(client_data.to(another_client.model.device)),
                             client_label.to(another_client.model.device),
                         ).cpu()
                     ).abs()
@@ -417,9 +392,7 @@ class LCFLServer(BaseServer):
         # the diagonal of dist_mat is 0, so we can simply add dist_mat and its transpose
         dist_mat = dist_mat + dist_mat.T
         if isinstance(self._cluster_method, DBSCAN):
-            self._cluster_method.eps = np.percentile(
-                dist_mat, 100 / (self.config.num_clusters - 1)
-            )
+            self._cluster_method.eps = np.percentile(dist_mat, 100 / (self.config.num_clusters - 1))
         cluster_ids = self._cluster_method.fit_predict(dist_mat)
 
         # form cluster centers
@@ -436,9 +409,7 @@ class LCFLServer(BaseServer):
 
     def _train_cluster_federated(self) -> None:
         """Perform federated training on each cluster."""
-        self._logger_manager.log_message(
-            "Perform federated training on each cluster..."
-        )
+        self._logger_manager.log_message("Perform federated training on each cluster...")
 
         total_iters = self.config.num_warmup_iters + self.config.num_iters
         with tqdm(

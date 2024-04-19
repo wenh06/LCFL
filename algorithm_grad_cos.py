@@ -2,24 +2,22 @@
 """
 
 from copy import deepcopy
-from typing import List, Optional, Dict, Any, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
 import torch
-from torch_ecg.utils.misc import add_docstring
 from sklearn.cluster import DBSCAN
 from sklearn_extra.cluster import KMedoids
+from torch_ecg.utils.misc import add_docstring
 from tqdm.auto import tqdm
 
 try:
-    from fl_sim.nodes import ClientMessage
-    from fl_sim.algorithms.fedopt import (
-        FedAvgClient as BaseClient,
-        FedAvgServer as BaseServer,
-        FedAvgClientConfig as BaseClientConfig,
-        FedAvgServerConfig as BaseServerConfig,
-    )
     from fl_sim.algorithms import register_algorithm
+    from fl_sim.algorithms.fedopt import FedAvgClient as BaseClient
+    from fl_sim.algorithms.fedopt import FedAvgClientConfig as BaseClientConfig
+    from fl_sim.algorithms.fedopt import FedAvgServer as BaseServer
+    from fl_sim.algorithms.fedopt import FedAvgServerConfig as BaseServerConfig
+    from fl_sim.nodes import ClientMessage
 
     _base_algorithm = "FedAvg"
 except ModuleNotFoundError:
@@ -30,14 +28,12 @@ except ModuleNotFoundError:
 
     sys.path.append(str(Path(__file__).parent / "fl-sim"))
 
-    from fl_sim.nodes import ClientMessage
-    from fl_sim.algorithms.fedopt import (
-        FedAvgClient as BaseClient,
-        FedAvgServer as BaseServer,
-        FedAvgClientConfig as BaseClientConfig,
-        FedAvgServerConfig as BaseServerConfig,
-    )
     from fl_sim.algorithms import register_algorithm
+    from fl_sim.algorithms.fedopt import FedAvgClient as BaseClient
+    from fl_sim.algorithms.fedopt import FedAvgClientConfig as BaseClientConfig
+    from fl_sim.algorithms.fedopt import FedAvgServer as BaseServer
+    from fl_sim.algorithms.fedopt import FedAvgServerConfig as BaseServerConfig
+    from fl_sim.nodes import ClientMessage
 
     _base_algorithm = "FedAvg"
 
@@ -125,9 +121,7 @@ class GradCosServerConfig(BaseServerConfig):
         self.cluster_method = cluster_method
         self.num_warmup_iters = num_warmup_iters
         self.local_warmup = local_warmup
-        self.warmup_clients_sample_ratio = (
-            warmup_clients_sample_ratio or clients_sample_ratio
-        )
+        self.warmup_clients_sample_ratio = warmup_clients_sample_ratio or clients_sample_ratio
 
 
 @register_algorithm()
@@ -189,15 +183,12 @@ class GradCosServer(BaseServer):
         super()._post_init()
         assert self.config.num_clusters > 0
         if self.config.cluster_method.lower() == "kmedoids":
-            self._cluster_method = KMedoids(
-                n_clusters=self.config.num_clusters, metric="precomputed"
-            )
+            self._cluster_method = KMedoids(n_clusters=self.config.num_clusters, metric="precomputed")
         elif self.config.cluster_method.lower() == "dbscan":
             self._cluster_method = DBSCAN(metric="precomputed")
         else:
             raise ValueError(
-                "Currenly only support 'dbscan' and 'kmedoids' as cluster method, "
-                f"got {self.config.cluster_method}"
+                "Currenly only support 'dbscan' and 'kmedoids' as cluster method, " f"got {self.config.cluster_method}"
             )
         self._cluster_centers = None
 
@@ -232,10 +223,7 @@ class GradCosServer(BaseServer):
             # send cluster centers to client
             target._received_messages = {
                 "parameters": [
-                    p.detach().clone()
-                    for p in self._cluster_centers[target._cluster_id][
-                        "center_model"
-                    ].parameters()
+                    p.detach().clone() for p in self._cluster_centers[target._cluster_id]["center_model"].parameters()
                 ]
             }
 
@@ -315,9 +303,7 @@ class GradCosServer(BaseServer):
         ) as outer_pbar:
             for self.n_iter in outer_pbar:
                 # selected_clients = list(range(self.config.num_clients))
-                selected_clients = self._sample_clients(
-                    clients_sample_ratio=self.config.warmup_clients_sample_ratio
-                )
+                selected_clients = self._sample_clients(clients_sample_ratio=self.config.warmup_clients_sample_ratio)
                 with tqdm(
                     total=len(selected_clients),
                     desc=f"Warm Up Iter {self.n_iter+1}/{self.config.num_warmup_iters}",
@@ -329,9 +315,7 @@ class GradCosServer(BaseServer):
                         client = self._clients[client_id]
                         if not self.config.local_warmup:
                             self._communicate(client)
-                        if (self.n_iter > 0) and (
-                            (self.n_iter + 1) % self.config.eval_every == 0
-                        ):
+                        if (self.n_iter > 0) and ((self.n_iter + 1) % self.config.eval_every == 0):
                             for part in self.dataset.data_parts:
                                 metrics = client.evaluate(part)
                                 metrics["cluster_id"] = -1
@@ -386,24 +370,15 @@ class GradCosServer(BaseServer):
                     # another_client.model.eval()
                     another_client_grad = another_client.get_gradients()
                     # flatten the gradients
-                    another_client_grad = torch.cat(
-                        [g.view(-1) for g in another_client_grad], dim=0
-                    ).to(client.device)
+                    another_client_grad = torch.cat([g.view(-1) for g in another_client_grad], dim=0).to(client.device)
                     # compute distance as 1 - cosine similarity of the gradients
-                    dist = (
-                        1
-                        - torch.cosine_similarity(
-                            client_grad, another_client_grad, dim=0
-                        ).item()
-                    )
+                    dist = 1 - torch.cosine_similarity(client_grad, another_client_grad, dim=0).item()
                     dist_mat[client_id][another_client_id] = dist
                     dist_mat[another_client_id][client_id] = dist
 
         # cluster clients
         if isinstance(self._cluster_method, DBSCAN):
-            self._cluster_method.eps = np.percentile(
-                dist_mat, 100 / (self.config.num_clusters - 1)
-            )
+            self._cluster_method.eps = np.percentile(dist_mat, 100 / (self.config.num_clusters - 1))
         cluster_ids = self._cluster_method.fit_predict(dist_mat)
 
         # form cluster centers
@@ -420,9 +395,7 @@ class GradCosServer(BaseServer):
 
     def _train_cluster_federated(self) -> None:
         """Perform federated training on each cluster."""
-        self._logger_manager.log_message(
-            "Perform federated training on each cluster..."
-        )
+        self._logger_manager.log_message("Perform federated training on each cluster...")
 
         total_iters = self.config.num_warmup_iters + self.config.num_iters
         with tqdm(
