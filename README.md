@@ -31,4 +31,26 @@ nohup fl-sim configs/lcfl-rot-mnist.yml > .logs/lcfl-rot-mnist.log 2>&1 & echo $
 
 ## Results
 
-to add images and tables....
+**ALL** experiments were repeated 5 times with different random seeds.
+
+### Experiments on the RotatedMNIST dataset
+
+ 1200 clients - ACC           |  1200 clients - loss
+:----------------------------:|:-----------------------------:
+![RotatedMNIST-1200-acc](images/RotatedMNIST-1200-val-acc.svg) | ![RotatedMNIST-1200-loss](images/RotatedMNIST-1200-val-loss.svg)
+ 2400 clients - ACC           |  2400 clients - loss
+![RotatedMNIST-2400-acc](images/RotatedMNIST-2400-val-acc.svg) | ![RotatedMNIST-2400-loss](images/RotatedMNIST-2400-val-loss.svg)
+
+### Experiments on the RotatedCIFAR10 dataset
+
+ dynamic transforms - ACC     | dynamic transforms - loss
+:----------------------------:|:-----------------------------:
+![RotatedCIFAR10-dt-acc](images/RotatedCIFAR10-dynamic-transform-val-acc.svg) | ![RotatedCIFAR10-dt-loss](images/RotatedCIFAR10-dynamic-transform-val-loss.svg)
+ no transforms - ACC          |  no transforms - loss
+![RotatedMNIST-nt-acc](images/RotatedCIFAR10-no-transform-val-acc.svg) | ![RotatedMNIST-nt-loss](images/RotatedCIFAR10-no-transform-val-loss.svg)
+
+### v.s. other norms
+
+FEMNIST                |  RotatedMNIST
+:---------------------:|:---------------------:
+![FEMNIST](images/LCFLversusOtherNorm-FEMNIST-NEW.svg) | ![RotatedMNIST](images/LCFLversusOtherNorm-RotMNIST-NEW.svg)
