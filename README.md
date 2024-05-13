@@ -29,6 +29,19 @@ mkdir -p .logs
 nohup fl-sim configs/lcfl-rot-mnist.yml > .logs/lcfl-rot-mnist.log 2>&1 & echo $! > .logs/lcfl-rot-mnist.pid
 ```
 
+## Inspection of the results
+
+One can use the `Panel` widget to inspect the results in a Jupyter notebook:
+
+```python
+%load_ext autoreload
+%autoreload 2
+
+from fl_sim.utils.viz import Panel
+
+panel = Panel()
+```
+
 ## Results
 
 **ALL** experiments were repeated 5 times with different random seeds.
