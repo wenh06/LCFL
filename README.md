@@ -67,3 +67,18 @@ panel = Panel()
 FEMNIST                |  RotatedMNIST
 :---------------------:|:---------------------:
 ![FEMNIST](images/LCFLversusOtherNorm-FEMNIST-NEW.svg) | ![RotatedMNIST](images/LCFLversusOtherNorm-RotMNIST-NEW.svg)
+
+## Citation
+
+If you find this code useful, please cite our paper:
+
+```bibtex
+@article{gu2024_LCFL,
+    title = {Novel clustered federated learning based on local loss},
+   author = {Endong Gu and Yongxin Chen and Hao Wen and Xingju Cai and Deren Han},
+  journal = {arXiv preprint arXiv:2407.09360v1},
+     year = {2024},
+    month = {7},
+      doi = {10.48550/arXiv.2407.09360}
+}
+```
