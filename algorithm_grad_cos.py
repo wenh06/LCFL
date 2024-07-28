@@ -456,6 +456,10 @@ class GradCosServer(BaseServer):
         """
         super().aggregate_client_metrics(ignore=ignore)
 
+    @property
+    def doi(self) -> List[str]:
+        return ["10.48550/arXiv.2407.09360"]
+
 
 @register_algorithm()
 @add_docstring(BaseClient.__doc__.replace(_base_algorithm, "GradCos"))
