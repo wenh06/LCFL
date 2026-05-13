@@ -9,16 +9,16 @@ h5py
 scikit-learn
 scikit-learn-extra
 scipy
-torch==1.13.1
-torchvision==0.14.1
+torch
+torchvision
 torch-optimizer
 datasets
-tokenizers==0.12.1
+tokenizers
 tqdm
 beautifulsoup4
 nltk
 requests
-bib-lookup>=0.0.19
+bib-lookup
 deprecate-kwargs
-torch-ecg>=0.0.26
+torch-ecg
 fl-sim @ git+https://github.com/wenh06/fl-sim@master

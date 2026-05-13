@@ -13,9 +13,9 @@ tqdm
 beautifulsoup4
 nltk
 datasets
-tokenizers==0.12.1
+tokenizers
 requests
-bib-lookup>=0.0.19
+bib-lookup
 deprecate-kwargs
-torch-ecg>=0.0.26
+torch-ecg
 fl-sim @ git+https://github.com/wenh06/fl-sim@master
