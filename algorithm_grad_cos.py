@@ -37,7 +37,6 @@ except ModuleNotFoundError:
 
 from _kmedoids_compat import KMedoids
 
-
 __all__ = [
     "GradCosServer",
     "GradCosClient",
