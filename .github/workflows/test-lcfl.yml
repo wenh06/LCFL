@@ -49,4 +49,4 @@ jobs:
         python -m pip list
     - name: Run test using fl-sim
       run: |
-        fl-sim configs-test/lcfl-test.yml
+        fl-sim configs-test/lcfl-action.yml
