@@ -7,7 +7,6 @@ seaborn
 Pillow
 h5py
 scikit-learn
-scikit-learn-extra
 scipy
 tqdm
 beautifulsoup4

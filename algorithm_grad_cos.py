@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional, Sequence
 import numpy as np
 import torch
 from sklearn.cluster import DBSCAN
-from sklearn_extra.cluster import KMedoids
 from torch_ecg.utils.misc import add_docstring
 from tqdm.auto import tqdm
 
@@ -35,6 +34,8 @@ except ModuleNotFoundError:
     from fl_sim.nodes import ClientMessage
 
     _base_algorithm = "FedAvg"
+
+from _kmedoids_compat import KMedoids
 
 
 __all__ = [
