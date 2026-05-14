@@ -1,5 +1,7 @@
 # Novel clustered federated learning based on local loss (LCFL)
 
+[![pytest](https://github.com/wenh06/LCFL/actions/workflows/test-lcfl.yml/badge.svg)](https://github.com/wenh06/LCFL/actions/workflows/test-lcfl.yml)
+
 ## Introduction
 
 This is the code for the paper [Novel clustered federated learning based on local loss] (to add link).
