@@ -70,13 +70,23 @@ FEMNIST                |  RotatedMNIST
 :---------------------:|:---------------------:
 ![FEMNIST](images/LCFLversusOtherNorm-FEMNIST-NEW.svg) | ![RotatedMNIST](images/LCFLversusOtherNorm-RotMNIST-NEW.svg)
 
-## Citation
+## Citations
 
-If you find this code useful, please cite our paper:
+If you find this code useful, please cite our papers:
 
 ```bibtex
+@article{gu2026_LCFL,
+      title = {Novel Clustered Federated Learning Based on Local Loss},
+     author = {Gu, Endong and Chen, Yongxin and Wen, Hao and Cai, Xingju and Han, Deren},
+    journal = {Optimization and Engineering},
+       issn = {1573-2924},
+        doi = {10.1007/s11081-026-10102-8},
+  publisher = {Springer Science and Business Media LLC},
+       year = {2026},
+      month = {6}
+}
 @article{gu2024_LCFL,
-    title = {Novel clustered federated learning based on local loss},
+    title = {Novel Clustered Federated Learning Based on Local Loss},
    author = {Endong Gu and Yongxin Chen and Hao Wen and Xingju Cai and Deren Han},
   journal = {arXiv preprint arXiv:2407.09360v1},
      year = {2024},
